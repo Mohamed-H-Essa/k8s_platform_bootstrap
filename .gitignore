@@ -1,0 +1,85 @@
+# Kubernetes Platform Bootstrap - .gitignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfvars
+!terraform.tfvars.example
+.terraform/
+.terraformrc
+terraform.rc
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+*.secret
+
+# AWS
+.aws/
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+*.pem
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Helm
+*.tgz
+
+# Documentation builds
+docs/_build/
+site/
+
+# Test files
+test-results/
+coverage/
+*.coverprofile
+
+# Build artifacts
+dist/
+build/
+out/

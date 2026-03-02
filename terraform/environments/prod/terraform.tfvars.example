@@ -1,0 +1,71 @@
+# Example terraform.tfvars for production environment
+
+region = "us-west-2"
+
+cluster_name    = "prod-cluster"
+cluster_version = "1.28"
+environment     = "production"
+
+vpc_cidr = "10.0.0.0/16"
+
+availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+node_groups = {
+  # General purpose workloads
+  general = {
+    instance_types = ["m5.large"]
+    min_size       = 2
+    max_size       = 10
+    desired_size   = 3
+    disk_size      = 50
+    capacity_type  = "ON_DEMAND"
+    labels = {
+      workload = "general"
+      environment = "production"
+    }
+  }
+
+  # Compute-intensive workloads
+  compute = {
+    instance_types = ["c5.xlarge"]
+    min_size       = 1
+    max_size       = 5
+    desired_size   = 2
+    disk_size      = 100
+    capacity_type  = "ON_DEMAND"
+    labels = {
+      workload = "compute"
+      environment = "production"
+    }
+  }
+
+  # Memory-intensive workloads (e.g., databases, caching)
+  memory = {
+    instance_types = ["r5.large"]
+    min_size       = 1
+    max_size       = 5
+    desired_size   = 2
+    disk_size      = 100
+    capacity_type  = "ON_DEMAND"
+    labels = {
+      workload = "memory"
+      environment = "production"
+    }
+    taints = [
+      {
+        key    = "workload"
+        value  = "memory"
+        effect = "NoSchedule"
+      }
+    ]
+  }
+}
+
+tags = {
+  Environment  = "production"
+  ManagedBy    = "terraform"
+  Project      = "k8s-platform-bootstrap"
+  Owner        = "your-team"
+  CostCenter   = "engineering"
+  BusinessUnit = "platform"
+}

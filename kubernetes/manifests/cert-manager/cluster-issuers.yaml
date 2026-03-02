@@ -1,0 +1,94 @@
+---
+# ClusterIssuer for Let's Encrypt staging
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  namespace: cert-manager
+spec:
+  acme:
+    # The ACME server URL
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    # Email address used for ACME registration
+    email: your-email@example.com
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    # Enable the HTTP-01 challenge provider
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# ClusterIssuer for Let's Encrypt production
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  namespace: cert-manager
+spec:
+  acme:
+    # The ACME server URL
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # Email address used for ACME registration
+    email: your-email@example.com
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    # Enable the HTTP-01 challenge provider
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# DNS-01 challenge solver for wildcard certificates (optional)
+# Uncomment if you want wildcard certificates
+# apiVersion: cert-manager.io/v1
+# kind: ClusterIssuer
+# metadata:
+#   name: letsencrypt-prod-dns
+#   namespace: cert-manager
+# spec:
+#   acme:
+#     server: https://acme-v02.api.letsencrypt.org/directory
+#     email: your-email@example.com
+#     privateKeySecretRef:
+#       name: letsencrypt-prod-dns
+#     solvers:
+#       - dns01:
+#           route53:
+#             region: us-west-2
+#             # The Access Key ID used to authenticate
+#             accessKeyID: YOUR_AWS_ACCESS_KEY_ID
+#             # The Secret Access Key used to authenticate
+#             secretAccessKeySecretRef:
+#               name: aws-route53-credentials
+#               key: secret-access-key
+#             # Role to assume (optional)
+#             # role: arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_ROLE
+---
+# Example certificate (create as needed)
+# apiVersion: cert-manager.io/v1
+# kind: Certificate
+# metadata:
+#   name: yourdomain-com
+#   namespace: production
+# spec:
+#   secretName: yourdomain-com-tls
+#   duration: 2160h # 90d
+#   renewBefore: 360h # 15d
+#   isCA: false
+#   privateKey:
+#     algorithm: RSA
+#     encoding: PKCS1
+#     size: 2048
+#   usages:
+#     - server auth
+#     - client auth
+#   dnsNames:
+#     - yourdomain.com
+#     - www.yourdomain.com
+#   issuerRef:
+#     name: letsencrypt-prod
+#     kind: ClusterIssuer
+#     group: cert-manager.io
