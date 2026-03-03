@@ -17,9 +17,9 @@ Production-grade EKS cluster deployment with GitOps, observability, and automati
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    AWS Infrastructure                     │
+│                    AWS Infrastructure                   │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │            EKS Cluster (Terraform)                │   │
+│  │            EKS Cluster (Terraform)               │   │
 │  │  ┌────────────────────────────────────────────┐  │   │
 │  │  │        ArgoCD (GitOps Controller)          │  │   │
 │  │  │  ┌──────────────────────────────────────┐  │  │   │
@@ -32,12 +32,28 @@ Production-grade EKS cluster deployment with GitOps, observability, and automati
 └─────────────────────────────────────────────────────────┘
 ```
 
+## 📚 Documentation
+
+**New to Kubernetes and AWS?** Start with our **Beginner's Guide**:
+- **[📘 Beginner's Guide](docs/BEGINNERS_GUIDE.md)** - Learn all the concepts from scratch
+- **[🚀 Quick Start](docs/QUICK_START.md)** - Deploy in 12 minutes
+- **[📋 Complete Workflow](docs/WORKFLOW.md)** - Step-by-step deployment guide
+
+**Understand the code**:
+- **[🏗️ Terraform Explained](docs/TERRAFORM_EXPLAINED.md)** - Line-by-line module explanations
+- **[☸️ Kubernetes Manifests Explained](docs/KUBERNETES_MANIFESTS_EXPLAINED.md)** - YAML breakdown
+- **[🔄 ArgoCD Explained](docs/ARGOCD_EXPLAINED.md)** - GitOps deep dive
+- **[🏢 Architecture](docs/ARCHITECTURE.md)** - System design
+
+**Detailed guides**:
+- **[📖 Deployment Guide](docs/DEPLOYMENT.md)** - Comprehensive deployment instructions
+
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd k8s-platform-bootstrap
+git clone https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap
+cd k8s_platform_bootstrap
 
 # Configure AWS credentials
 export AWS_ACCESS_KEY_ID="your-access-key"
