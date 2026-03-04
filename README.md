@@ -239,4 +239,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Issues**: GitHub Issues
 - **Documentation**: [docs/](docs/)
-- **Email**: your-email@example.com
+- **Email**: me@mecodes.live
