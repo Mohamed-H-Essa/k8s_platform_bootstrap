@@ -302,3 +302,11 @@ each area; the first commit can be "WIP: Slipway rebuild (app, local infra, GitO
   README draft (`NUMBERS` placeholder), interview guide draft (`{{…}}` placeholders = measured
   numbers still to fill in).
 - Image: 34.2 MB (docker image ls), SBOM 43 packages.
+- Later fixes (all committed): `IdentitiesOnly=yes` for `make publish` (an ssh-agent key made
+  soft-serve see us as anonymous → "not authorized"); **app crash** at start with tracing on
+  ("conflicting Schema URL", OTel resource merge) fixed in `tracing.go` + regression test; released
+  as a new tag with `make release`. Laptop CPU: the host's load average was 15–25 (iOS simulators
+  etc.), so the cluster was CPU-starved. Trimmed: Grafana limit 768Mi (chart sets GOMEMLIMIT=90 %
+  of the limit → GC storm at 384Mi), no stock dashboards; server-side diff only on our 4 dir apps;
+  Kyverno reports controller off; Alloy reads `/var/log/pods` instead of API log streams; Argo CD
+  repo-server/server probes 10 s timeouts (they were liveness-killed), Git polling 180 s.
