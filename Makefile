@@ -39,8 +39,11 @@ up: keys ## create everything: cluster, registry, caches, Git, Argo CD, then the
 
 .PHONY: down
 down: ## delete the cluster and Argo CD (registry, caches and Git data are kept)
+	@# the Helm releases live inside the cluster and go with it: forget them instead of
+	@# uninstalling them one by one (that also works when the cluster is already broken)
+	-terraform -chdir=$(TF_LOCAL) state rm helm_release.root helm_release.argocd >/dev/null 2>&1
 	TF_VAR_docker_host=$(DOCKER_SOCK) TF_VAR_git_admin_public_key=$(LOCAL)/git_ed25519.pub \
-	  terraform -chdir=$(TF_LOCAL) destroy -auto-approve -input=false
+	  terraform -chdir=$(TF_LOCAL) destroy -auto-approve -input=false -refresh=false
 
 .PHONY: clean
 clean: down ## down, and also delete the image caches and the local registry's data
