@@ -49,7 +49,7 @@ echo "$(jq '.packages | length' "$SBOM") packages → ${SBOM#"$ROOT"/}"
 cosign() {
   docker run --rm --network kind --user "$(id -u)" \
     -v "$LOCAL:/work:ro" -e COSIGN_PASSWORD= \
-    "$COSIGN_IMAGE" "$@" --key /work/cosign.key --allow-insecure-registry --tlog-upload=false --yes
+    "$COSIGN_IMAGE" "$@" --key /work/cosign.key --allow-http-registry --tlog-upload=false --yes
 }
 
 step "sign"
