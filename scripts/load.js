@@ -5,12 +5,17 @@
 //
 // Traffic mix: 85 % redirects, 10 % new links, 5 % stats reads. Redirects are not
 // followed (we test the shortener, not example.com). Thresholds are the SLOs.
+// LOG_REQUESTS=1 prints one line per request ("epoch_ms status route ok ms"); the chaos
+// scripts send it to a file with --console-output and count failures per time window.
 import http from 'k6/http';
 import { check } from 'k6';
 
 const BASE = __ENV.BASE || 'http://sho.localtest.me';
 const RATE = Number(__ENV.RATE || 50);
 const DURATION = __ENV.DURATION || '2m';
+const LOG = __ENV.LOG_REQUESTS === '1';
+// fail fast instead of hanging on a dead endpoint (k6's default is 60 s)
+const TIMEOUT = __ENV.TIMEOUT || '5s';
 
 export const options = {
   maxRedirects: 0,
@@ -35,7 +40,12 @@ function create(i) {
   return http.post(`${BASE}/api/links`, JSON.stringify({ url: `https://example.com/k6/${i}` }), {
     headers: { 'Content-Type': 'application/json' },
     tags: { name: 'create' },
+    timeout: TIMEOUT,
   });
+}
+
+function note(res, route, ok) {
+  if (LOG) console.log(`${Date.now()} ${res.status} ${route} ${ok ? 1 : 0} ${Math.round(res.timings.duration)}`);
 }
 
 // a pool of links to read, made once before the test
@@ -53,14 +63,14 @@ export default function (data) {
   const roll = Math.random();
   if (roll < 0.1) {
     const res = create(`${__VU}-${__ITER}`);
-    check(res, { 'create → 201': (r) => r.status === 201 });
+    note(res, 'create', check(res, { 'create → 201': (r) => r.status === 201 }));
   } else if (roll < 0.15) {
     const code = data.codes[Math.floor(Math.random() * data.codes.length)];
-    const res = http.get(`${BASE}/api/links/${code}`, { tags: { name: 'stats' } });
-    check(res, { 'stats → 200': (r) => r.status === 200 });
+    const res = http.get(`${BASE}/api/links/${code}`, { tags: { name: 'stats' }, timeout: TIMEOUT });
+    note(res, 'stats', check(res, { 'stats → 200': (r) => r.status === 200 }));
   } else {
     const code = data.codes[Math.floor(Math.random() * data.codes.length)];
-    const res = http.get(`${BASE}/${code}`, { tags: { name: 'redirect' } });
-    check(res, { 'redirect → 302': (r) => r.status === 302 });
+    const res = http.get(`${BASE}/${code}`, { tags: { name: 'redirect' }, timeout: TIMEOUT });
+    note(res, 'redirect', check(res, { 'redirect → 302': (r) => r.status === 302 }));
   }
 }
