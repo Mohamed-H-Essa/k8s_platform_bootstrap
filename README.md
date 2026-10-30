@@ -71,8 +71,19 @@ make down      # delete the cluster (image caches stay warm)
 
 ## Measured on a laptop
 
-<!-- numbers: filled in from real runs only -->
-NUMBERS
+Real runs on one laptop (OrbStack, 8 CPU / 8 GB; the host was busy with other work, load
+average 10–20), so read them as behaviour, not benchmarks. Evidence and method:
+[postmortem](docs/postmortems/2026-10-30-chaos-day.md).
+
+| What | Measured |
+|---|---|
+| `make up` with warm caches (after `make down`) | **11 min 20 s** to all 14 Argo CD Applications Synced + Healthy |
+| Images a cold start pulls through the caches | **1.77 GB** (docker.io 992 MB, quay.io 427 MB, ghcr.io 317 MB, registry.k8s.io 37 MB) |
+| Shortener image | **34.2 MB** (7.2 MiB compressed), distroless, 43 packages in its SBOM, 0 fixable HIGH/CRITICAL |
+| `make load`: 2 min at 50 req/s | **6,031 requests, 0 failed**, p50 7.4 ms, **p95 168.5 ms**, p99 411 ms |
+| `make release` under load | 43–45 s build → scan → SBOM → sign → publish (6.5 min after a code change, before Go build caching); rolled out 35–48 s later; **0 failed requests** (2 runs) |
+| Pod killed (`--grace-period=0`) | back to 4/4 ready in **12 s**, **0 failed requests** |
+| Worker node lost (before the fixes) | **48 % of requests failed for 6 min 3 s**; the app's own metrics saw none of it ([why](docs/postmortems/2026-10-30-chaos-day.md)) |
 
 ## How it works
 
