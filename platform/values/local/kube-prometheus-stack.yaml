@@ -1,0 +1,12 @@
+# Local only. The evidence must outlive what it watches: chaos day stops worker nodes, so
+# Prometheus and Alertmanager run on the control-plane node (on AWS: the system node group).
+prometheus:
+  prometheusSpec:
+    nodeSelector: { node-role.kubernetes.io/control-plane: "" }
+    tolerations:
+      - { key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule }
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector: { node-role.kubernetes.io/control-plane: "" }
+    tolerations:
+      - { key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule }

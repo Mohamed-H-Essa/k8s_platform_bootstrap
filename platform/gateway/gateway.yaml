@@ -11,10 +11,23 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
+        replicas: 2 # one per worker: losing a node never takes the gateway down
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels: { gateway.envoyproxy.io/owning-gateway-name: platform }
+          # leave a dead node after 30 s instead of the default 5 minutes
+          tolerations:
+            - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+            - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
         container:
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 256Mi }
+      envoyPDB: { minAvailable: 1 }
       envoyService:
         type: NodePort
         patch:
