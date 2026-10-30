@@ -30,6 +30,7 @@ nothing about how much unreliability is acceptable.
 - Time to detect depends on how bad things are. The long window must cross 14.4× the budget
   (7.2 % errors for availability), so with an error ratio *r* and a clean hour before it, the page
   needs about `60 min × 0.072 / r` plus the `for: 1m`. A total outage pages in minutes; a 10 %
-  error rate takes much longer. Chaos day measures it.
+  error rate takes much longer, and a short sharp outage may never page (chaos day: 6 minutes at
+  48 % errors stays under 7.2 % over the hour).
 - The SLI is measured at the service. Failures that never reach it (the gateway answering 503
   because no backend is ready) are not counted; the k6 client view on chaos day shows the gap.

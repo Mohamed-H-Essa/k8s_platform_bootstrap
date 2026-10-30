@@ -351,3 +351,18 @@ Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothin
   SLO `or vector(0)`). **Next:** re-run `scripts/chaos/run-all.sh node-loss db-failover bad-release`,
   then measure warm/cold `make up`, write postmortem + numbers into README/interview guide
   (placeholders `NUMBERS`, `{{…}}`), delete old docs (done in working tree), commit, push, CI.
+- 13:45–14:20: **Run 3** (fresh cluster, `.local/chaos/20261030-134946`): node loss after the fixes
+  = 2 of 5,719 requests failed, pods ready elsewhere at +84 s. DB failover right after it: no
+  promotion for >5 min (the CNPG operator, moved by the node loss, was restarting on an overloaded
+  node; failover finally happened ~15 min later) and the app hung (11,665 client timeouts). Fixed:
+  2 CNPG operators, 2 s DB call timeouts (released as a new tag). Then the kind control plane itself
+  started losing leader elections (kube-controller-manager/scheduler CrashLoopBackOff) with the
+  host at load avg 11–20: chaos stopped there. CI (`ci.yml`) green incl. GHCR + keyless signing;
+  AWS overlay pinned to `sha-b2b8bd2…` (first CI-signed image). `e2e.yml` triggered (run 41049674053).
+- **What is next** (for whoever continues): on a quieter machine (or after `make down && make up`),
+  run `scripts/chaos/run-all.sh db-failover bad-release`, then put the failover time and the
+  time-to-page into the postmortem (section "Not completed"), README table and interview guide
+  (search for "not run yet" / "not yet re-measured"). Cold `make up` was never timed cleanly
+  (the first run was interrupted by fixes); the caches hold 1.77 GB, so time `make clean && make up`
+  once. Open action items: gateway-level SLI (Envoy PodMonitor + rule), priority classes for
+  platform controllers, caches for reg.kyverno.io and public.ecr.aws.

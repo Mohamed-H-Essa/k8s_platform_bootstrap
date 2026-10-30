@@ -26,9 +26,9 @@ about something that isn't here, say so; don't round up.
    server. Inside: Argo CD, then the platform layers, then the workload.
 2. **`make up`** (1 min): show `infra/terraform/envs/local/main.tf`. Terraform stops at Argo CD and
    one root Application; everything else is in `platform/apps` (one line per component, sync
-   waves 0 → 2). Mention the pull-through caches: {{UP_COLD}} cold vs {{UP_WARM}} warm.
+   waves 0 → 2). Mention the pull-through caches: 11 min 20 s from `make down` to all 14 Applications healthy with warm caches; a cold start first pulls 1.77 GB of images through them.
 3. **A release** (1 min): `make release`: build, Trivy gate, push, Syft SBOM, cosign sign + attest,
-   commit the tag, publish. Argo CD rolls it out with `maxUnavailable: 0`; under load: {{RELEASE_RESULT}}.
+   commit the tag, publish. Argo CD rolls it out with `maxUnavailable: 0`; under 50 req/s of load it took 43–45 s to build and sign and 35–48 s to roll out, with 0 failed requests (two runs).
    Then `make unsigned`: Kyverno's refusal message on screen.
 4. **Grafana** (1 min): the SLO dashboard: availability, latency, burn rate with the 14.4× line.
    Click an exemplar on the latency graph → the trace in Tempo → its logs in Loki.
@@ -61,16 +61,26 @@ from each team's routes. Envoy Gateway is a standalone implementation, no mesh r
 current error ratio divided by the budget; 1× would spend the budget in exactly 30 days. The page
 fires when both the 1-hour and the 5-minute burn rates are above 14.4× (2 % of the monthly budget
 in one hour). The long window proves it's real; the short one proves it's still happening, so the
-alert clears minutes after the fix. On chaos day a 50 % error rate on redirects paged after
-{{PAGE_TIME}}.
+alert clears minutes after the fix. For a 50 % error rate on redirects (about 42 % of all
+traffic) after a clean hour, that is roughly `60 × 0.072 / 0.42 ≈ 10` minutes plus the 1-minute
+`for`. I have not measured it yet: the bad-release experiment is written but did not run on my
+laptop (honest answer if asked).
 
 **What happens when the database primary dies?** CloudNativePG notices, promotes the streaming
 replica and points the `-rw` Service at it. The app's readiness doesn't depend on the database on
 purpose: otherwise every pod goes unready at once and the gateway has nowhere to send traffic.
-Measured: {{DB_RESULT}}.
+On chaos day the first attempt failed in an instructive way: the operator itself had just been
+moved by the node-loss experiment and was restarting, so nothing promoted the replica for over
+5 minutes, and the app hung on the database instead of answering 503. Fixes: two operator
+replicas and a 2-second bound on every database call. Lesson: the failover is only as available
+as the thing that performs it.
 
 **What happens when a node dies?** Kubernetes marks it NotReady after the node-monitor grace
-period; pods tolerate that for 30 s (default is 5 minutes) and then move. Measured: {{NODE_RESULT}}.
+period; pods tolerate that for 30 s (default is 5 minutes) and then move. Measured: before the fixes, 48 % of requests failed for 6 minutes, because the gateway's
+controller and Kyverno's only admission controller were on the lost node (stale endpoints; the
+eviction DELETE refused by a fail-closed webhook). After the fixes (two replicas, 30 s
+tolerations, Envoy retries and outlier detection, Kyverno never sees DELETE): 2 of 5,719
+requests failed and the pods were running elsewhere 84 s after the stop.
 
 **How would this run on AWS?** `infra/terraform/envs/aws`: VPC over three AZs with private nodes
 and one NAT (cost), EKS with spot workers and a small on-demand system group, scheduled scale-down
@@ -86,6 +96,13 @@ pod spec pins the exact bytes that were signed. `make unsigned` shows the refusa
 **Why sign with a key locally but keyless in CI?** Keyless (Fulcio + Rekor) needs an OIDC identity
 and the public transparency log; a laptop registry that never leaves the machine doesn't need
 either. In GitHub Actions the workflow's OIDC token signs, and nothing long-lived has to be stored.
+
+**What did chaos day find?** Three real problems, all in the platform, not the app: single
+replicas with the default 5-minute eviction delay (Envoy Gateway, Kyverno, the CloudNativePG
+operator), a fail-closed webhook that also intercepted DELETEs, and an SLI that cannot see
+gateway errors. Plus a GitOps trap: Argo CD's server-side diff ignores mutating-webhook changes by
+default, and Kyverno rewrites images to `tag@digest`, so a release looked "Synced" and never
+rolled out. Each one has a commit that fixes it and a line in the postmortem.
 
 **What broke while building it?** True stories: Trivy blocked the very first image (a HIGH CVE in
 `golang.org/x/net`, fixed by bumping it); kind's node image still uses a version-2 containerd
@@ -110,4 +127,8 @@ The design is meant to transfer; the numbers are not a benchmark.
 
 ## The numbers
 
-{{NUMBERS_TABLE}}
+All measured, with method, in the README table and the postmortem. The ones to remember:
+warm `make up` 11–14 min; image 34.2 MB (7.2 MiB compressed); 2 min at 50 req/s: 6,031
+requests, 0 failed, p95 168.5 ms; release under load: 0 failed requests, ~45 s to build and
+sign, 35–48 s to roll out; pod kill: 0 failed, 12 s to ready; node loss: 48 % failing for 6 min
+before the fixes, 2 failed out of 5,719 after.

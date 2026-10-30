@@ -43,8 +43,10 @@ the alert clears within minutes of the fix instead of an hour later.
 
 **Time to detect.** For availability the 1 h ratio must pass 7.2 %. With an error ratio *r* that
 starts after a clean hour, that takes about `60 min × 0.072 / r`, plus one minute of `for`, plus
-up to a minute of scrape and evaluation delay. The measured value from chaos day is in the
-[postmortem](postmortems/2026-10-30-chaos-day.md).
+up to a minute of scrape and evaluation delay. `scripts/chaos/bad-release.sh` measures it; it has
+not run yet (see the [postmortem](postmortems/2026-10-30-chaos-day.md)). Chaos day also showed the
+other side: a 6-minute outage at 48 % errors would not page at all, because over an hour it stays
+under 7.2 %.
 
 ## What the SLI does not see
 - Requests that never reach a pod: Envoy answering 503 because no backend is ready, or a client
