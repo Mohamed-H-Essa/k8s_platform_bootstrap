@@ -9,7 +9,7 @@ metadata:
     policies.kyverno.io/title: Restricted workloads
 spec:
   validationFailureAction: Enforce
-  background: true
+  background: false # enforced at admission; no background scans (no reports controller)
   rules:
     - name: image-has-a-version
       match: &apps

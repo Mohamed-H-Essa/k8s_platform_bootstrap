@@ -11,8 +11,8 @@ configs:
     controller.repo.server.timeout.seconds: 300
     server.repo.server.timeout.seconds: 300
   cm:
-    # check Git every minute (the Makefile also asks for a refresh after each push)
-    timeout.reconciliation: 60s
+    # check Git every 3 minutes; `make publish` asks every Application to refresh at once
+    timeout.reconciliation: 180s
     # Applications report health, so the root app's sync waves wait for each layer
     # (CRDs, operators) to be Healthy before the next one starts
     resource.customizations.health.argoproj.io_Application: |

@@ -9,15 +9,14 @@ backgroundController:
   resources:
     requests: { cpu: 25m, memory: 64Mi }
     limits: { memory: 256Mi }
+# policy reports (background scans of everything) are off: on the laptop the reports
+# controller was the busiest process on its node. Admission control is unaffected.
 reportsController:
-  resources:
-    requests: { cpu: 25m, memory: 64Mi }
-    limits: { memory: 256Mi }
+  enabled: false
 cleanupController:
   enabled: false
 features:
-  # no report object per admission request: on a laptop that churn costs more CPU than
-  # it is worth (background scan reports are still written)
+  # no report object per admission request either
   admissionReports:
     enabled: false
   registryClient:

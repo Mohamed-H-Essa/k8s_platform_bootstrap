@@ -64,7 +64,7 @@ $(LOCAL)/grafana-password:
 publish: ## push the committed state to the in-cluster Git server (Argo CD syncs it)
 	@git diff --quiet HEAD -- platform || echo "note: uncommitted changes under platform/ are not published"
 	GIT_SSH_COMMAND="$(GIT_SSH)" git push --force --quiet ssh://localhost/platform.git HEAD:main
-	-@kubectl -n argocd annotate application root argocd.argoproj.io/refresh=hard --overwrite >/dev/null 2>&1
+	-@kubectl -n argocd annotate applications --all argocd.argoproj.io/refresh=normal --overwrite >/dev/null 2>&1
 	@echo "published $$(git rev-parse --short HEAD)"
 
 .PHONY: image
