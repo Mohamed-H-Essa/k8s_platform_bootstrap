@@ -44,12 +44,18 @@ controller:
     serviceMonitor:
       enabled: false # turned on by the observability layer once its CRDs exist
 repoServer:
+  # generous probes: on a busy laptop a 1-second health check times out and the pod is
+  # restarted half way through rendering a chart
+  readinessProbe: { timeoutSeconds: 10, failureThreshold: 6 }
+  livenessProbe: { timeoutSeconds: 10, failureThreshold: 6, periodSeconds: 20 }
   env:
     - { name: ARGOCD_EXEC_TIMEOUT, value: 5m } # helm template of big charts on a slow laptop
   resources:
     requests: { cpu: 50m, memory: 128Mi }
     limits: { memory: 512Mi }
 server:
+  readinessProbe: { timeoutSeconds: 10, failureThreshold: 6 }
+  livenessProbe: { timeoutSeconds: 10, failureThreshold: 6, periodSeconds: 20 }
   resources:
     requests: { cpu: 50m, memory: 96Mi }
     limits: { memory: 256Mi }
