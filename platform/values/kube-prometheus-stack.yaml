@@ -44,6 +44,9 @@ prometheus-node-exporter:
     requests: { cpu: 10m, memory: 24Mi }
 
 grafana:
+  # only our dashboards: the ~25 stock Kubernetes dashboards kept Grafana busy re-indexing
+  # (over a CPU core on the laptop)
+  defaultDashboardsEnabled: false
   # the admin password is not in Git: `make up` creates this Secret (.local/grafana-password)
   admin:
     existingSecret: grafana-admin
@@ -53,6 +56,11 @@ grafana:
   grafana.ini:
     server:
       root_url: http://grafana.localtest.me
+    # no phoning home for updates and usage stats (slow link, and nobody to tell)
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+      check_for_plugin_updates: false
     # read-only browsing without a login (admin: see `make urls`)
     auth.anonymous:
       enabled: true
