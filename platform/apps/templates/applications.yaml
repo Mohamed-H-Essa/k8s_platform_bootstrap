@@ -5,12 +5,15 @@ before it is Healthy (see the health check in platform/values/argocd.yaml):
   0  operators and CRDs: metrics, gateway, Postgres operator, policy engine, Prometheus
   1  what builds on them: logs, traces, collector, gateway routes, policies, SLO rules
   2  the workload: the shortener and its database
+
+serverSideDiff: compare with a server-side dry run (Kyverno's chart renders `labels: {}` on
+its CRDs, which a client-side diff reports as drift forever).
 */ -}}
 {{- $apps := list
   (dict "name" "metrics-server" "wave" 0 "namespace" "kube-system" "repo" "https://kubernetes-sigs.github.io/metrics-server/" "chart" "metrics-server" "version" "3.14.0")
   (dict "name" "envoy-gateway" "wave" 0 "namespace" "envoy-gateway-system" "repo" "docker.io/envoyproxy" "chart" "gateway-helm" "version" "1.9.3" "release" "eg")
   (dict "name" "cloudnative-pg" "wave" 0 "namespace" "cnpg-system" "repo" "https://cloudnative-pg.github.io/charts" "chart" "cloudnative-pg" "version" "0.29.1" "release" "cnpg")
-  (dict "name" "kyverno" "wave" 0 "namespace" "kyverno" "repo" "https://kyverno.github.io/kyverno/" "chart" "kyverno" "version" "3.9.2")
+  (dict "name" "kyverno" "wave" 0 "namespace" "kyverno" "repo" "https://kyverno.github.io/kyverno/" "chart" "kyverno" "version" "3.9.2" "serverSideDiff" true)
   (dict "name" "kube-prometheus-stack" "wave" 0 "namespace" "monitoring" "repo" "https://prometheus-community.github.io/helm-charts" "chart" "kube-prometheus-stack" "version" "92.16.1" "release" "kps")
   (dict "name" "loki" "wave" 1 "namespace" "monitoring" "repo" "https://grafana.github.io/helm-charts" "chart" "loki" "version" "7.5.0")
   (dict "name" "tempo" "wave" 1 "namespace" "monitoring" "repo" "https://grafana.github.io/helm-charts" "chart" "tempo" "version" "1.24.4")
