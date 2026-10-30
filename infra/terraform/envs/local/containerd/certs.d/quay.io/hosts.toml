@@ -1,0 +1,4 @@
+server = "https://quay.io"
+
+[host."http://slipway-cache-quayio:5000"]
+  capabilities = ["pull", "resolve"]

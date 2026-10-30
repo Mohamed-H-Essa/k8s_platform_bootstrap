@@ -1,0 +1,5 @@
+# Set by the environment (infra/terraform/envs/<env>): where Argo CD reads this repo.
+repoURL: http://slipway-git:23232/platform.git
+revision: main
+# local | aws: picks platform/values/<env>/*.yaml overrides on top of the common values
+env: local

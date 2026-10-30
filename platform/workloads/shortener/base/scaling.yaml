@@ -1,0 +1,23 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: shortener
+  namespace: shortener
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: shortener }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+---
+# voluntary disruptions (node drains, upgrades) never take the last pod
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: shortener
+  namespace: shortener
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: shortener }

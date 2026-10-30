@@ -1,0 +1,25 @@
+# Postgres, run by the CloudNativePG operator: a primary and a streaming replica on
+# different nodes. If the primary dies, the operator promotes the replica and moves the
+# shortener-db-rw Service to it. The app only ever talks to shortener-db-rw.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: shortener-db
+  namespace: shortener
+spec:
+  instances: 2
+  storage:
+    size: 1Gi
+  bootstrap:
+    initdb:
+      database: shortener
+      owner: shortener # credentials land in the Secret shortener-db-app (key: uri)
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: preferred
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 384Mi }
+  monitoring:
+    enablePodMonitor: true

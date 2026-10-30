@@ -1,0 +1,5 @@
+server = "https://registry-1.docker.io"
+
+# pull through the local cache first; fall back to Docker Hub if it is down
+[host."http://slipway-cache-dockerio:5000"]
+  capabilities = ["pull", "resolve"]

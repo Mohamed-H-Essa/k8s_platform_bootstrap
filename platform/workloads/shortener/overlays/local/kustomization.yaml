@@ -1,0 +1,9 @@
+# Local: the image comes from the laptop's registry. `make release` rewrites newTag.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: shortener
+    newName: slipway-registry:5000/shortener
+    newTag: 0.1.0

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shortener
+  namespace: shortener
+  labels: { app.kubernetes.io/name: shortener }
+spec:
+  # no replicas field: the HorizontalPodAutoscaler owns the count (2–6)
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 } # never fewer pods than before
+  selector:
+    matchLabels: { app.kubernetes.io/name: shortener }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: shortener }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      nodeSelector:
+        slipway.dev/pool: apps
+      # one pod per node where possible, so losing a node never takes all of them
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/name: shortener }
+      # leave a dead node after 30 s instead of the default 5 minutes
+      tolerations:
+        - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+        - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: shortener
+          image: shortener # the overlay pins registry, tag and Kyverno pins the digest
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: admin, containerPort: 9090 }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: shortener-db-app, key: uri } }
+            - name: BASE_URL
+              value: http://sho.localtest.me
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.monitoring:4318
+            - name: FAULT_ERROR_RATE # chaos day only: see docs/chaos-day.md
+              value: "0"
+          readinessProbe:
+            httpGet: { path: /readyz, port: admin }
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /livez, port: admin }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }

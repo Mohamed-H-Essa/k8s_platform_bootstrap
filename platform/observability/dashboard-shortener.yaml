@@ -1,0 +1,67 @@
+# The service dashboard (Grafana loads every ConfigMap labelled grafana_dashboard=1).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-shortener-slo
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+data:
+  shortener-slo.json: "{\n \"uid\": \"shortener-slo\",\n \"title\": \"Shortener \\u00b7 service and SLOs\",\n \"tags\": [\n  \"slipway\",\n  \"slo\"\n ],\n \"timezone\": \"browser\",\n \"schemaVersion\"\
+    : 39,\n \"refresh\": \"10s\",\n \"time\": {\n  \"from\": \"now-1h\",\n  \"to\": \"now\"\n },\n \"panels\": [\n  {\n   \"id\": 1,\n   \"type\": \"stat\",\n   \"title\": \"Availability (5 min)\",\n  \
+    \ \"description\": \"Requests answered without a 5xx. Objective: 99.5 %.\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 4,\n\
+    \    \"w\": 6,\n    \"x\": 0,\n    \"y\": 0\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"expr\": \"1 - slo:sli_error:ratio_rate5m{slo=\\\"availability\\\"}\",\n     \"datasource\"\
+    : {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     }\n    }\n   ],\n   \"options\": {\n    \"reduceOptions\": {\n     \"calcs\": [\n      \"lastNotNull\"\n     ]\n    },\n   \
+    \ \"colorMode\": \"background\",\n    \"graphMode\": \"area\"\n   },\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"percentunit\",\n     \"decimals\": 3,\n     \"thresholds\": {\n   \
+    \   \"mode\": \"absolute\",\n      \"steps\": [\n       {\n        \"color\": \"red\",\n        \"value\": null\n       },\n       {\n        \"color\": \"orange\",\n        \"value\": 0.99\n      \
+    \ },\n       {\n        \"color\": \"green\",\n        \"value\": 0.995\n       }\n      ]\n     }\n    }\n   }\n  },\n  {\n   \"id\": 2,\n   \"type\": \"stat\",\n   \"title\": \"Fast enough (5 min)\"\
+    ,\n   \"description\": \"Requests answered within 300 ms. Objective: 95 %.\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\":\
+    \ 4,\n    \"w\": 6,\n    \"x\": 6,\n    \"y\": 0\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"expr\": \"1 - slo:sli_error:ratio_rate5m{slo=\\\"latency\\\"}\",\n     \"datasource\"\
+    : {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     }\n    }\n   ],\n   \"options\": {\n    \"reduceOptions\": {\n     \"calcs\": [\n      \"lastNotNull\"\n     ]\n    },\n   \
+    \ \"colorMode\": \"background\",\n    \"graphMode\": \"area\"\n   },\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"percentunit\",\n     \"decimals\": 3,\n     \"thresholds\": {\n   \
+    \   \"mode\": \"absolute\",\n      \"steps\": [\n       {\n        \"color\": \"red\",\n        \"value\": null\n       },\n       {\n        \"color\": \"orange\",\n        \"value\": 0.9\n       },\n\
+    \       {\n        \"color\": \"green\",\n        \"value\": 0.95\n       }\n      ]\n     }\n    }\n   }\n  },\n  {\n   \"id\": 3,\n   \"type\": \"stat\",\n   \"title\": \"Budget burn, availability\
+    \ (1 h)\",\n   \"description\": \"1x spends the 30-day budget in exactly 30 days. Pages at 14.4x.\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\"\
+    : {\n    \"h\": 4,\n    \"w\": 6,\n    \"x\": 12,\n    \"y\": 0\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"expr\": \"slo:sli_error:ratio_rate1h{slo=\\\"availability\\\"} / on(slo)\
+    \ slo:error_budget:ratio\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     }\n    }\n   ],\n   \"options\": {\n    \"reduceOptions\": {\n     \"calcs\"\
+    : [\n      \"lastNotNull\"\n     ]\n    },\n    \"colorMode\": \"background\",\n    \"graphMode\": \"area\"\n   },\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"x\",\n     \"decimals\"\
+    : 1,\n     \"thresholds\": {\n      \"mode\": \"absolute\",\n      \"steps\": [\n       {\n        \"color\": \"green\",\n        \"value\": null\n       },\n       {\n        \"color\": \"orange\"\
+    ,\n        \"value\": 6\n       },\n       {\n        \"color\": \"red\",\n        \"value\": 14.4\n       }\n      ]\n     }\n    }\n   }\n  },\n  {\n   \"id\": 4,\n   \"type\": \"stat\",\n   \"title\"\
+    : \"Budget burn, latency (1 h)\",\n   \"description\": \"Pages at 14.4x.\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 4,\n\
+    \    \"w\": 6,\n    \"x\": 18,\n    \"y\": 0\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"expr\": \"slo:sli_error:ratio_rate1h{slo=\\\"latency\\\"} / on(slo) slo:error_budget:ratio\"\
+    ,\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     }\n    }\n   ],\n   \"options\": {\n    \"reduceOptions\": {\n     \"calcs\": [\n      \"lastNotNull\"\
+    \n     ]\n    },\n    \"colorMode\": \"background\",\n    \"graphMode\": \"area\"\n   },\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"x\",\n     \"decimals\": 1,\n     \"thresholds\"\
+    : {\n      \"mode\": \"absolute\",\n      \"steps\": [\n       {\n        \"color\": \"green\",\n        \"value\": null\n       },\n       {\n        \"color\": \"orange\",\n        \"value\": 6\n\
+    \       },\n       {\n        \"color\": \"red\",\n        \"value\": 14.4\n       }\n      ]\n     }\n    }\n   }\n  },\n  {\n   \"id\": 5,\n   \"type\": \"timeseries\",\n   \"title\": \"Requests per\
+    \ second\",\n   \"description\": \"\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 8,\n    \"w\": 12,\n    \"x\": 0,\n   \
+    \ \"y\": 4\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n    \
+    \ \"expr\": \"sum by (route, code) (rate(shortener_http_requests_total[1m]))\",\n     \"legendFormat\": \"{{route}} {{code}}\"\n    }\n   ],\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\"\
+    : \"reqps\",\n     \"custom\": {\n      \"lineWidth\": 2,\n      \"fillOpacity\": 8\n     }\n    },\n    \"overrides\": []\n   },\n   \"options\": {\n    \"legend\": {\n     \"displayMode\": \"list\"\
+    ,\n     \"placement\": \"bottom\"\n    },\n    \"tooltip\": {\n     \"mode\": \"multi\"\n    }\n   }\n  },\n  {\n   \"id\": 6,\n   \"type\": \"timeseries\",\n   \"title\": \"Latency (the dots are traces:\
+    \ click one)\",\n   \"description\": \"\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 8,\n    \"w\": 12,\n    \"x\": 12,\n\
+    \    \"y\": 4\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n \
+    \    \"expr\": \"histogram_quantile(0.50, sum by (le) (rate(shortener_http_request_duration_seconds_bucket[1m])))\",\n     \"legendFormat\": \"p50\"\n    },\n    {\n     \"refId\": \"B\",\n     \"datasource\"\
+    : {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": true,\n     \"expr\": \"histogram_quantile(0.95, sum by (le) (rate(shortener_http_request_duration_seconds_bucket[1m])))\"\
+    ,\n     \"legendFormat\": \"p95\"\n    },\n    {\n     \"refId\": \"C\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n\
+    \     \"expr\": \"histogram_quantile(0.99, sum by (le) (rate(shortener_http_request_duration_seconds_bucket[1m])))\",\n     \"legendFormat\": \"p99\"\n    },\n    {\n     \"refId\": \"D\",\n     \"\
+    datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n     \"expr\": \"vector(0.3)\",\n     \"legendFormat\": \"objective (300 ms)\"\n\
+    \    }\n   ],\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"s\",\n     \"custom\": {\n      \"lineWidth\": 2,\n      \"fillOpacity\": 8\n     }\n    },\n    \"overrides\": []\n   },\n\
+    \   \"options\": {\n    \"legend\": {\n     \"displayMode\": \"list\",\n     \"placement\": \"bottom\"\n    },\n    \"tooltip\": {\n     \"mode\": \"multi\"\n    }\n   }\n  },\n  {\n   \"id\": 7,\n\
+    \   \"type\": \"timeseries\",\n   \"title\": \"Availability burn rate\",\n   \"description\": \"Both the 1 h and the 5 min line above 14.4 for a minute: page.\",\n   \"datasource\": {\n    \"type\"\
+    : \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 8,\n    \"w\": 12,\n    \"x\": 0,\n    \"y\": 12\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"\
+    datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n     \"expr\": \"slo:sli_error:ratio_rate5m{slo=\\\"availability\\\"} / on(slo) slo:error_budget:ratio\"\
+    ,\n     \"legendFormat\": \"5 min\"\n    },\n    {\n     \"refId\": \"B\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n\
+    \     \"expr\": \"slo:sli_error:ratio_rate1h{slo=\\\"availability\\\"} / on(slo) slo:error_budget:ratio\",\n     \"legendFormat\": \"1 h\"\n    },\n    {\n     \"refId\": \"C\",\n     \"datasource\"\
+    : {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n     \"expr\": \"slo:sli_error:ratio_rate6h{slo=\\\"availability\\\"} / on(slo) slo:error_budget:ratio\"\
+    ,\n     \"legendFormat\": \"6 h\"\n    },\n    {\n     \"refId\": \"D\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n\
+    \     \"expr\": \"vector(14.4)\",\n     \"legendFormat\": \"page (14.4x)\"\n    }\n   ],\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"unit\": \"x\",\n     \"custom\": {\n      \"lineWidth\":\
+    \ 2,\n      \"fillOpacity\": 8\n     }\n    },\n    \"overrides\": []\n   },\n   \"options\": {\n    \"legend\": {\n     \"displayMode\": \"list\",\n     \"placement\": \"bottom\"\n    },\n    \"tooltip\"\
+    : {\n     \"mode\": \"multi\"\n    }\n   }\n  },\n  {\n   \"id\": 8,\n   \"type\": \"timeseries\",\n   \"title\": \"Pods ready\",\n   \"description\": \"Shortener and Postgres pods (CloudNativePG keeps\
+    \ a primary and a replica).\",\n   \"datasource\": {\n    \"type\": \"prometheus\",\n    \"uid\": \"prometheus\"\n   },\n   \"gridPos\": {\n    \"h\": 8,\n    \"w\": 12,\n    \"x\": 12,\n    \"y\":\
+    \ 12\n   },\n   \"targets\": [\n    {\n     \"refId\": \"A\",\n     \"datasource\": {\n      \"type\": \"prometheus\",\n      \"uid\": \"prometheus\"\n     },\n     \"exemplar\": false,\n     \"expr\"\
+    : \"sum by (pod) (kube_pod_status_ready{namespace=\\\"shortener\\\", condition=\\\"true\\\"})\",\n     \"legendFormat\": \"{{pod}}\"\n    }\n   ],\n   \"fieldConfig\": {\n    \"defaults\": {\n     \"\
+    unit\": \"short\",\n     \"custom\": {\n      \"lineWidth\": 2,\n      \"fillOpacity\": 8\n     }\n    },\n    \"overrides\": []\n   },\n   \"options\": {\n    \"legend\": {\n     \"displayMode\": \"\
+    list\",\n     \"placement\": \"bottom\"\n    },\n    \"tooltip\": {\n     \"mode\": \"multi\"\n    }\n   }\n  },\n  {\n   \"id\": 9,\n   \"type\": \"logs\",\n   \"title\": \"Errors (click a trace_id\
+    \ to open the trace)\",\n   \"datasource\": {\n    \"type\": \"loki\",\n    \"uid\": \"loki\"\n   },\n   \"gridPos\": {\n    \"h\": 9,\n    \"w\": 24,\n    \"x\": 0,\n    \"y\": 20\n   },\n   \"targets\"\
+    : [\n    {\n     \"refId\": \"A\",\n     \"datasource\": {\n      \"type\": \"loki\",\n      \"uid\": \"loki\"\n     },\n     \"expr\": \"{namespace=\\\"shortener\\\", container=\\\"shortener\\\"} |=\
+    \ \\\"\\\\\\\"level\\\\\\\":\\\\\\\"ERROR\\\\\\\"\\\"\"\n    }\n   ],\n   \"options\": {\n    \"showTime\": true,\n    \"wrapLogMessage\": true,\n    \"sortOrder\": \"Descending\"\n   }\n  }\n ]\n}"

@@ -1,0 +1,83 @@
+# Service level objectives for the shortener, as multi-window, multi-burn-rate alerts
+# (the method from Google's SRE workbook, chapter 5).
+#
+#   availability  99.5 % of requests answer without a 5xx   → error budget 0.5 %
+#   latency       95 %   of requests answer within 300 ms   → error budget 5 %
+#
+# A burn rate is how fast the budget is being spent: 1 = exactly on budget for 30 days.
+# "page" fires when both a long and a short window burn fast: the long window proves it
+# is real, the short one that it is still happening (so the alert clears quickly once
+# fixed). 14.4× over 1 h spends 2 % of the monthly budget; 6× over 6 h spends 5 %.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shortener-slo
+  namespace: monitoring
+spec:
+  groups:
+    - name: shortener-sli
+      interval: 30s
+      rules:
+        # ---- availability: share of requests that failed with a 5xx ----
+        - record: slo:sli_error:ratio_rate5m
+          labels: { slo: availability }
+          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[5m])) / sum(rate(shortener_http_requests_total[5m]))
+        - record: slo:sli_error:ratio_rate30m
+          labels: { slo: availability }
+          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[30m])) / sum(rate(shortener_http_requests_total[30m]))
+        - record: slo:sli_error:ratio_rate1h
+          labels: { slo: availability }
+          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[1h])) / sum(rate(shortener_http_requests_total[1h]))
+        - record: slo:sli_error:ratio_rate6h
+          labels: { slo: availability }
+          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[6h])) / sum(rate(shortener_http_requests_total[6h]))
+        # ---- latency: share of requests slower than 300 ms ----
+        - record: slo:sli_error:ratio_rate5m
+          labels: { slo: latency }
+          expr: 1 - sum(rate(shortener_http_request_duration_seconds_bucket{le="0.3"}[5m])) / sum(rate(shortener_http_request_duration_seconds_count[5m]))
+        - record: slo:sli_error:ratio_rate30m
+          labels: { slo: latency }
+          expr: 1 - sum(rate(shortener_http_request_duration_seconds_bucket{le="0.3"}[30m])) / sum(rate(shortener_http_request_duration_seconds_count[30m]))
+        - record: slo:sli_error:ratio_rate1h
+          labels: { slo: latency }
+          expr: 1 - sum(rate(shortener_http_request_duration_seconds_bucket{le="0.3"}[1h])) / sum(rate(shortener_http_request_duration_seconds_count[1h]))
+        - record: slo:sli_error:ratio_rate6h
+          labels: { slo: latency }
+          expr: 1 - sum(rate(shortener_http_request_duration_seconds_bucket{le="0.3"}[6h])) / sum(rate(shortener_http_request_duration_seconds_count[6h]))
+        # ---- the budgets, so the alerts and dashboards can divide by them ----
+        - record: slo:error_budget:ratio
+          labels: { slo: availability }
+          expr: vector(0.005)
+        - record: slo:error_budget:ratio
+          labels: { slo: latency }
+          expr: vector(0.05)
+
+    - name: shortener-slo-alerts
+      rules:
+        - alert: ShortenerErrorBudgetFastBurn
+          expr: |
+            (
+              slo:sli_error:ratio_rate1h > on(slo) group_left() (14.4 * slo:error_budget:ratio)
+              and
+              slo:sli_error:ratio_rate5m > on(slo) group_left() (14.4 * slo:error_budget:ratio)
+            )
+          for: 1m
+          labels: { severity: page, service: shortener }
+          annotations:
+            summary: "{{ $labels.slo }} SLO: burning the error budget 14x too fast"
+            description: >-
+              At this rate the 30-day {{ $labels.slo }} budget is gone in about 2 days.
+              Check the latest release first (argocd app history shortener).
+            runbook_url: https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/blob/main/docs/runbooks/slo-burn.md
+        - alert: ShortenerErrorBudgetSlowBurn
+          expr: |
+            (
+              slo:sli_error:ratio_rate6h > on(slo) group_left() (6 * slo:error_budget:ratio)
+              and
+              slo:sli_error:ratio_rate30m > on(slo) group_left() (6 * slo:error_budget:ratio)
+            )
+          for: 5m
+          labels: { severity: ticket, service: shortener }
+          annotations:
+            summary: "{{ $labels.slo }} SLO: burning the error budget 6x too fast"
+            runbook_url: https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/blob/main/docs/runbooks/slo-burn.md

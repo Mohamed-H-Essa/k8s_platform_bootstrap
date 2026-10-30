@@ -1,0 +1,6 @@
+# The Gateway API implementation (ingress-nginx was retired in 2026).
+deployment:
+  envoyGateway:
+    resources:
+      requests: { cpu: 50m, memory: 96Mi }
+      limits: { memory: 256Mi }

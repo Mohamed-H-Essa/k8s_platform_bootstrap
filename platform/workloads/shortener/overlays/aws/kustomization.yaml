@@ -1,0 +1,15 @@
+# AWS: the image comes from GHCR, built, scanned and signed (keyless) by CI.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: shortener
+    newName: ghcr.io/mohamed-h-essa/shortener
+    newTag: 0.1.0
+patches:
+  - target: { kind: Deployment, name: shortener }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: https://sho.example.com

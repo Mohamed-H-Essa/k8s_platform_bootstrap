@@ -1,0 +1,56 @@
+# Baseline for application namespaces (label slipway.dev/policy=restricted): a pinned
+# image version, requests and a memory limit on every container, never root, no
+# privilege escalation. Platform namespaces (charts we don't own) are not blocked.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restricted-workloads
+  annotations:
+    policies.kyverno.io/title: Restricted workloads
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: image-has-a-version
+      match: &apps
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchLabels: { slipway.dev/policy: restricted }
+      validate:
+        message: "Images need an explicit version (a tag or a digest)."
+        pattern:
+          spec:
+            containers:
+              - image: "*:*"
+    - name: no-latest-tag
+      match: *apps
+      validate:
+        message: "':latest' is not a version."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"
+    - name: requests-and-memory-limit
+      match: *apps
+      validate:
+        message: "Every container needs CPU and memory requests and a memory limit."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests: { cpu: "?*", memory: "?*" }
+                  limits: { memory: "?*" }
+    - name: non-root-no-escalation
+      match: *apps
+      validate:
+        message: "Run as a non-root user, without privilege escalation."
+        anyPattern:
+          - spec:
+              securityContext: { runAsNonRoot: true }
+              containers:
+                - securityContext: { allowPrivilegeEscalation: false }
+          - spec:
+              containers:
+                - securityContext: { runAsNonRoot: true, allowPrivilegeEscalation: false }

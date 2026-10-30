@@ -1,0 +1,11 @@
+# Tempo receives traces from the OpenTelemetry Collector over OTLP.
+tempo:
+  retention: 24h
+  receivers:
+    otlp:
+      protocols:
+        grpc: { endpoint: "0.0.0.0:4317" }
+        http: { endpoint: "0.0.0.0:4318" }
+  resources:
+    requests: { cpu: 25m, memory: 96Mi }
+    limits: { memory: 512Mi }

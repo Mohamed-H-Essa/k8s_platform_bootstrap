@@ -1,0 +1,21 @@
+# The policy engine. One replica of each controller is plenty locally.
+admissionController:
+  replicas: 1
+  container:
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits: { memory: 384Mi }
+backgroundController:
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { memory: 256Mi }
+reportsController:
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits: { memory: 256Mi }
+cleanupController:
+  enabled: false
+features:
+  registryClient:
+    # the local registry speaks plain HTTP (it never leaves the laptop)
+    allowInsecure: true

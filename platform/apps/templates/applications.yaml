@@ -1,0 +1,47 @@
+{{- /*
+The platform, layer by layer. A wave starts only when every Application in the wave
+before it is Healthy (see the health check in platform/values/argocd.yaml):
+
+  0  operators and CRDs: metrics, gateway, Postgres operator, policy engine, Prometheus
+  1  what builds on them: logs, traces, collector, gateway routes, policies, SLO rules
+  2  the workload: the shortener and its database
+*/ -}}
+{{- $apps := list
+  (dict "name" "metrics-server" "wave" 0 "namespace" "kube-system" "repo" "https://kubernetes-sigs.github.io/metrics-server/" "chart" "metrics-server" "version" "3.14.0")
+  (dict "name" "envoy-gateway" "wave" 0 "namespace" "envoy-gateway-system" "repo" "docker.io/envoyproxy" "chart" "gateway-helm" "version" "1.9.3" "release" "eg")
+  (dict "name" "cloudnative-pg" "wave" 0 "namespace" "cnpg-system" "repo" "https://cloudnative-pg.github.io/charts" "chart" "cloudnative-pg" "version" "0.29.1" "release" "cnpg")
+  (dict "name" "kyverno" "wave" 0 "namespace" "kyverno" "repo" "https://kyverno.github.io/kyverno/" "chart" "kyverno" "version" "3.9.2")
+  (dict "name" "kube-prometheus-stack" "wave" 0 "namespace" "monitoring" "repo" "https://prometheus-community.github.io/helm-charts" "chart" "kube-prometheus-stack" "version" "92.16.1" "release" "kps")
+  (dict "name" "loki" "wave" 1 "namespace" "monitoring" "repo" "https://grafana.github.io/helm-charts" "chart" "loki" "version" "7.5.0")
+  (dict "name" "tempo" "wave" 1 "namespace" "monitoring" "repo" "https://grafana.github.io/helm-charts" "chart" "tempo" "version" "1.24.4")
+  (dict "name" "alloy" "wave" 1 "namespace" "monitoring" "repo" "https://grafana.github.io/helm-charts" "chart" "alloy" "version" "1.15.0")
+  (dict "name" "otel-collector" "wave" 1 "namespace" "monitoring" "repo" "https://open-telemetry.github.io/opentelemetry-helm-charts" "chart" "opentelemetry-collector" "version" "0.178.1")
+-}}
+{{- range $apps }}
+---
+{{ include "slipway.helmApp" (merge . (dict "root" $)) }}
+{{- end }}
+{{- $dirs := list
+  (dict "name" "platform-gateway" "wave" 1 "namespace" "envoy-gateway-system" "path" "platform/gateway")
+  (dict "name" "platform-policies" "wave" 1 "namespace" "kyverno" "path" "platform/policies")
+  (dict "name" "platform-observability" "wave" 1 "namespace" "monitoring" "path" "platform/observability")
+  (dict "name" "shortener" "wave" 2 "namespace" "shortener" "path" (printf "platform/workloads/shortener/overlays/%s" $.Values.env))
+-}}
+{{- range $dirs }}
+---
+{{ include "slipway.dirApp" (merge . (dict "root" $)) }}
+{{- end }}
+---
+# Envoy Gateway's chart is published to an OCI registry (Docker Hub)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-envoyproxy-oci
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: helm
+  name: envoyproxy
+  url: docker.io/envoyproxy
+  enableOCI: "true"

@@ -1,0 +1,42 @@
+# Supply chain gate: an image from the platform's registry runs only if it was signed
+# with the release key AND carries a signed SBOM attestation. Kyverno also pins the tag
+# to the digest it verified, so what runs is exactly what was signed.
+# The public key is the Secret kyverno/cosign-pub (made by `make up` from .local/cosign.pub).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-platform-images
+  annotations:
+    policies.kyverno.io/title: Signed images with an SBOM
+    policies.kyverno.io/description: >-
+      Images from slipway-registry:5000 must be signed by the release key and have an
+      SPDX SBOM attestation signed by the same key.
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 15
+  background: false
+  rules:
+    - name: signed-and-attested
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - imageReferences: ["slipway-registry:5000/*"]
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: k8s://kyverno/cosign-pub
+                    rekor: { ignoreTlog: true }
+                    ctlog: { ignoreSCT: true }
+          attestations:
+            - type: https://spdx.dev/Document
+              attestors:
+                - entries:
+                    - keys:
+                        publicKeys: k8s://kyverno/cosign-pub
+                        rekor: { ignoreTlog: true }
+                        ctlog: { ignoreSCT: true }

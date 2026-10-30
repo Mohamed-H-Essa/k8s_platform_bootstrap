@@ -1,0 +1,54 @@
+# Argo CD, sized for a laptop. Terraform installs it once (infra/terraform/envs/*);
+# from then on Argo CD manages everything else from Git.
+global:
+  domain: argocd.localtest.me
+
+configs:
+  params:
+    # TLS ends at the gateway; behind it the server speaks plain HTTP
+    server.insecure: true
+  cm:
+    # check Git every minute (the Makefile also asks for a refresh after each push)
+    timeout.reconciliation: 60s
+    # Applications report health, so the root app's sync waves wait for each layer
+    # (CRDs, operators) to be Healthy before the next one starts
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil and obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+      return hs
+
+# not needed locally: SSO, notifications, ApplicationSets
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  replicas: 0
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 768Mi }
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false # turned on by the observability layer once its CRDs exist
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+server:
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits: { memory: 256Mi }
+redis:
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { memory: 128Mi }

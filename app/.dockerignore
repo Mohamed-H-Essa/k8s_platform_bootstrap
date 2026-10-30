@@ -1,0 +1,4 @@
+# keep the build context small and secret-free
+**/*_test.go
+Dockerfile
+.dockerignore

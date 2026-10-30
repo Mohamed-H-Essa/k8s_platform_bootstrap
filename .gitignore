@@ -83,3 +83,9 @@ coverage/
 dist/
 build/
 out/
+
+# Slipway local state: keys, kubeconfig, SBOMs, chart value dumps, docker config
+.local/
+# test and build output
+app/shortener
+*.out
