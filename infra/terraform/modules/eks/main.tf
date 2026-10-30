@@ -61,6 +61,20 @@ resource "aws_iam_role_policy_attachment" "cluster" {
   policy_arn = "${local.policy_prefix}/AmazonEKSClusterPolicy"
 }
 
+# the control plane encrypts and decrypts Secrets with the key above, and only that key
+data "aws_iam_policy_document" "cluster_kms" {
+  statement {
+    actions   = ["kms:Encrypt", "kms:Decrypt", "kms:ListGrants", "kms:DescribeKey"]
+    resources = [aws_kms_key.secrets.arn]
+  }
+}
+
+resource "aws_iam_role_policy" "cluster_kms" {
+  name   = "secrets-encryption"
+  role   = aws_iam_role.cluster.id
+  policy = data.aws_iam_policy_document.cluster_kms.json
+}
+
 # ---- the cluster ---------------------------------------------------------------------------
 # Accepted trivy finding AWS-0040 (public API endpoint): a lab has no VPN or bastion, so
 # the endpoint stays public, but only for var.public_access_cidrs (0.0.0.0/0 is rejected).
@@ -107,6 +121,7 @@ resource "aws_eks_cluster" "this" {
 
   depends_on = [
     aws_iam_role_policy_attachment.cluster,
+    aws_iam_role_policy.cluster_kms,
     aws_cloudwatch_log_group.cluster,
   ]
 }

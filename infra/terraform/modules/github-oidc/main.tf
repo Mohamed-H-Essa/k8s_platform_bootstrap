@@ -5,6 +5,9 @@
 # audience sts.amazonaws.com, and a subject naming this repository and an allowed ref or
 # environment. The run gets credentials for at most an hour; there is nothing to leak or
 # rotate.
+#
+# An account has at most one provider per issuer URL: if it already exists, import it
+# (terraform import module.<name>.aws_iam_openid_connect_provider.github <arn>).
 
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
