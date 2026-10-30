@@ -29,30 +29,17 @@ is written in Terraform and checked offline (`validate`, `tflint`, `trivy config
 
 ---
 
-## 2. Status (what exists, what works)
+## 2. Status (what exists, what works), updated 2026-10-30 ~13:45 by the second agent
 
 | Area | State |
 |---|---|
-| `app/` Go service | **Done and tested** (`go test -race` passes). Not yet run in the cluster. |
-| `app/Dockerfile` | Written (golang:1.27-alpine → distroless static nonroot). **Image build not yet verified** (base image was still downloading). |
-| `infra/terraform/envs/local/` | Written (kind + registry + 4 caches + soft-serve + Argo CD + root app). **Never applied; `terraform init` not run yet.** |
-| `infra/terraform/envs/local/containerd/certs.d/` | hosts.toml per registry (caches + plain-HTTP local registry). |
-| `platform/apps/` (Helm chart, app of apps) | Written. Renders 13 Applications + an OCI repo Secret. Not yet synced. |
-| `platform/values/*.yaml` | Written for every chart (sizes trimmed for 8 GB). Unverified against live charts. |
-| `platform/gateway/` | Envoy Gateway: EnvoyProxy (NodePort 30080), GatewayClass `envoy`, Gateway `platform`, routes for Grafana / Argo CD / Prometheus. |
-| `platform/policies/` | Kyverno: `verify-platform-images` (cosign signature + SPDX attestation, key from Secret `kyverno/cosign-pub`), `restricted-workloads` (version pinned, no :latest, requests+memory limit, non-root, no escalation) for namespaces labelled `slipway.dev/policy=restricted`. |
-| `platform/observability/` | SLO recording + alerting rules (`slo-rules.yaml`), Grafana dashboard ConfigMap (`dashboard-shortener.yaml`). |
-| `platform/workloads/shortener/` | base (namespace, CNPG Cluster ×2, Deployment, Service, HPA+PDB, ServiceMonitor, HTTPRoute) + overlays `local` (registry `slipway-registry:5000`, tag `0.1.0`) and `aws` (GHCR). `kubectl kustomize` renders OK. |
-| `Makefile` | Written. Calls scripts that **don't exist yet** (see §5). |
-| `scripts/` | **To write** (old `scripts/setup.sh`, `scripts/destroy.sh` are from the old repo → delete). |
-| AWS env (`infra/terraform/envs/aws`, `modules/`), CI (`.github/workflows/`), `scripts/lint-manifests.sh` | **Done** on branch `slipway-aws-ci` (offline: `make aws-check`, `make ci-lint`, lint-manifests all pass). See §10. |
-| README, docs, chaos day | **To do** (§5). |
-| Old repo content | `terraform/` (custom VPC + EKS modules, prod env), `kubernetes/`, old docs (`docs/*_EXPLAINED.md`, `BEGINNERS_GUIDE.md`, `PROJECT_SUMMARY.md`, `DOCUMENTATION_OVERVIEW.md`, `CONTRIBUTING.md`): **replace**. Reuse ideas from `terraform/modules/{vpc,eks}` for the AWS env, then delete the old tree. Keep `LICENSE`. |
-
-Nothing is committed yet except `.gitignore` changes (see §8 for the commit plan). **Do not push to GitHub
-until the platform works end to end and CI is green locally (actionlint)**: the repo is public.
-
----
+| `app/` | Done, tested (`go test -race`, incl. a tracing setup test). Runs in the cluster. |
+| Local env (`make up`) | **Works**: 14/14 Argo CD apps Synced+Healthy, `make smoke` passes, `make unsigned` refused by Kyverno, dashboard has data, exemplar → Tempo trace, Loki has logs. Warm `make up` 11 min 20 s. |
+| Release (`make release`) | Works under load, 0 failed requests (2 runs). |
+| Chaos day | Run 1: node loss failed (48 % errors for 6 min) → fixed. Run 2: release blocked (CNPG probe + server-side diff hid Kyverno's digest) → fixed. Run 3 (node-loss, db-failover, bad-release on a fresh cluster): see §9 log / postmortem. |
+| AWS env, CI | Merged from `slipway-aws-ci`. `ci.yml` **green on GitHub** (incl. GHCR push + keyless sign/attest/verify). `e2e.yml` triggered (see §9). |
+| Docs | README (numbers), architecture, SLO, runbooks, 12 ADRs, chaos day, postmortem, interview guide, aws.md. Old docs and trees deleted. |
+| Pushed | Yes, `origin/main` (merged the owner's README email change). |
 
 ## 3. Environment gotchas on this Mac (important, all found the hard way)
 
