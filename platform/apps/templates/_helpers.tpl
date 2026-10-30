@@ -45,7 +45,10 @@ spec:
   {{- include "slipway.sync" . | nindent 2 }}
 {{- end -}}
 
-{{/* Plain manifests (Kustomize) from a directory of this repo. */}}
+{{/* Plain manifests (Kustomize) from a directory of this repo. Compared with a
+     server-side dry run, so fields the API server fills in (Gateway API defaults, the
+     digest Kyverno pins) are not reported as drift. Only here: on the big upstream charts
+     a dry run per resource per refresh costs more CPU than a laptop has. */}}
 {{- define "slipway.dirApp" -}}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -54,6 +57,7 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: {{ .wave | quote }}
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
   finalizers: [resources-finalizer.argocd.argoproj.io]
 spec:
   project: default

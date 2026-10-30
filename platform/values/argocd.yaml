@@ -7,9 +7,6 @@ configs:
   params:
     # TLS ends at the gateway; behind it the server speaks plain HTTP
     server.insecure: true
-    # compare like `kubectl apply --server-side --dry-run`: fields the API server fills in
-    # (Gateway API routes, Kyverno policies) don't show up as drift
-    controller.diff.server.side: true
     # chart repositories can be slow to download on a slow connection
     controller.repo.server.timeout.seconds: 300
     server.repo.server.timeout.seconds: 300
@@ -41,7 +38,7 @@ applicationSet:
 controller:
   resources:
     requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 768Mi }
+    limits: { memory: 1Gi }
   metrics:
     enabled: true
     serviceMonitor:

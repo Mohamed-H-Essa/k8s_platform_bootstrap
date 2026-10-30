@@ -44,15 +44,16 @@ prometheus-node-exporter:
     requests: { cpu: 10m, memory: 24Mi }
 
 grafana:
-  # only our dashboards: the ~25 stock Kubernetes dashboards kept Grafana busy re-indexing
-  # (over a CPU core on the laptop)
+  # only our dashboards (the ~25 stock Kubernetes ones are not needed here)
   defaultDashboardsEnabled: false
   # the admin password is not in Git: `make up` creates this Secret (.local/grafana-password)
   admin:
     existingSecret: grafana-admin
+  # the chart sets GOMEMLIMIT to 90 % of the limit: at 384Mi Grafana 13 spent over a CPU
+  # core collecting garbage
   resources:
-    requests: { cpu: 25m, memory: 128Mi }
-    limits: { memory: 384Mi }
+    requests: { cpu: 25m, memory: 256Mi }
+    limits: { memory: 768Mi }
   grafana.ini:
     server:
       root_url: http://grafana.localtest.me
