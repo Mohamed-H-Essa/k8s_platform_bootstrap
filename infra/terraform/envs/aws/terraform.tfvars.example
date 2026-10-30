@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Everything else has a default
+# (variables.tf).
+api_allowed_cidrs  = ["203.0.113.10/32"] # your public IP, /32 (this one is a documentation address)
+budget_email       = "you@example.com"
+monthly_budget_usd = 0 # set your own limit (must be > 0); alerts at 80 % actual, 100 % forecast
+
+# optional
+# region             = "eu-central-1"
+# single_nat_gateway = true
+# admin_principal_arns = ["arn:aws:iam::<account-id>:role/<your-admin-role>"]
+# night_schedule = { enabled = true, time_zone = "Europe/Berlin", down_cron = "0 20 * * *", up_cron = "0 7 * * 1-5" }

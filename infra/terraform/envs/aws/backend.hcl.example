@@ -1,0 +1,9 @@
+# S3 backend settings. Copy to backend.hcl, fill in, then
+#   terraform init -backend-config=backend.hcl
+# Create the bucket (versioned, encrypted, public access blocked) and the lock table
+# first: docs/aws.md shows the commands.
+bucket         = "slipway-tfstate-<account-id>"
+key            = "envs/aws/terraform.tfstate"
+region         = "eu-central-1"
+encrypt        = true
+dynamodb_table = "slipway-tflock" # partition key LockID (String): Terraform 1.5 locks here
