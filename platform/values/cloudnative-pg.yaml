@@ -7,3 +7,9 @@ resources:
   limits: { memory: 256Mi }
 monitoring:
   podMonitorEnabled: false # the database's own PodMonitor lives with the workload
+# A busy laptop: the operator needed more than its default ~30 s to start serving and was
+# killed by its liveness probe in a loop (and with it, its webhooks: Argo CD could not
+# even dry-run the database Cluster). Give it up to 5 minutes to start.
+webhook:
+  startupProbe: { failureThreshold: 30, periodSeconds: 10 }
+
