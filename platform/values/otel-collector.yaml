@@ -2,8 +2,15 @@
 # backend can change without touching them.
 fullnameOverride: otel-collector # the service apps send to: otel-collector.monitoring
 mode: deployment
+# the Kubernetes distribution: everything this pipeline needs, a fraction of contrib's size
+# (contrib did not finish starting within its liveness window on the busy laptop)
 image:
-  repository: otel/opentelemetry-collector-contrib
+  repository: otel/opentelemetry-collector-k8s
+livenessProbe:
+  initialDelaySeconds: 20
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 6
 resources:
   requests: { cpu: 25m, memory: 64Mi }
   limits: { memory: 256Mi }
