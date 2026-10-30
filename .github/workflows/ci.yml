@@ -199,7 +199,7 @@ jobs:
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
       # cosign v2: its signature and attestation format is the one the cluster's Kyverno
       # verifies (the local release path uses cosign v2 for the same reason)
-      - uses: sigstore/cosign-installer@v4
+      - uses: sigstore/cosign-installer@v4.1.2
         with:
           cosign-release: v2.6.5
       - name: Sign, attest the SBOM, verify (keyless)
