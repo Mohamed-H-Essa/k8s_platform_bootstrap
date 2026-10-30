@@ -1,6 +1,6 @@
 # Two stages: build a static binary, then ship it alone on distroless (no shell, no
-# package manager, runs as a non-root user). The final image is ~15 MB and has
-# almost nothing for a scanner, or an attacker, to find.
+# package manager, runs as a non-root user). The final image is the binary plus
+# distroless (CA certificates, tzdata): almost nothing for a scanner, or an attacker, to find.
 FROM golang:1.27-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
