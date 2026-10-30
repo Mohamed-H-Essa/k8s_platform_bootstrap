@@ -103,3 +103,6 @@ urls: ## where everything is
 	@echo "  Argo CD    http://argocd.localtest.me   (admin / $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d))"
 	@echo "  Prometheus http://prometheus.localtest.me"
 	@echo
+
+# extra targets live in mk/*.mk (e.g. mk/aws.mk for the AWS environment and CI checks)
+-include mk/*.mk
