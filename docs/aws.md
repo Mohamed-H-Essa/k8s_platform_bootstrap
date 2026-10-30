@@ -122,8 +122,10 @@ Below the gate (MEDIUM/LOW), left on purpose, all for cost:
   buckets with Pod Identity roles.
 - **Autoscaling**: no Cluster Autoscaler or Karpenter; node counts are fixed per group, apart
   from the schedule.
-- **Release tag**: CI tags images `sha-<commit>` and `main`; the `aws` overlay still pins
-  `0.1.0`. Nothing bumps it automatically.
+- **Release tag**: CI tags images `sha-<commit>` and `main`. The `aws` overlay now pins
+  `sha-b2b8bd20953a7eea06a12c1ad843ca8d544ff649`, the first image CI pushed and signed keyless
+  (Rekor entries 3592298354 and 3592299333). An AWS release is a commit that moves this tag; nothing
+  bumps it automatically.
 
 Done since (in `platform/`): the gateway is per environment (`platform/gateway/aws`: two Envoy
 replicas across zones behind an NLB, PDB), and the signature gate on AWS verifies the keyless
