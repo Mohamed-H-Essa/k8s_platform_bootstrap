@@ -1,4 +1,12 @@
 # The policy engine. One replica of each controller is plenty locally.
+config:
+  webhooks:
+    # Kyverno only sees application namespaces (label slipway.dev/policy=restricted). Its
+    # webhooks fail closed, so this keeps a Kyverno outage from blocking the platform
+    # itself (Argo CD, monitoring, the operators): that happened on a CPU-starved laptop.
+    namespaceSelector:
+      matchLabels:
+        slipway.dev/policy: restricted
 admissionController:
   replicas: 1
   container:

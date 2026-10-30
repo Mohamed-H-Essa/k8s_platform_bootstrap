@@ -1,5 +1,6 @@
-# Supply chain gate: an image from the platform's registry runs only if it was signed
-# with the release key AND carries a signed SBOM attestation. Kyverno also pins the tag
+# Supply chain gate: in application namespaces (label slipway.dev/policy=restricted), an
+# image from the platform's registry runs only if it was signed with the release key AND
+# carries a signed SBOM attestation. Kyverno also pins the tag
 # to the digest it verified, so what runs is exactly what was signed.
 # The public key is the Secret kyverno/cosign-pub (made by `make up` from .local/cosign.pub).
 apiVersion: kyverno.io/v1
@@ -21,6 +22,9 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              # application namespaces; platform namespaces run upstream images
+              namespaceSelector:
+                matchLabels: { slipway.dev/policy: restricted }
       verifyImages:
         - imageReferences: ["slipway-registry:5000/*"]
           mutateDigest: true
