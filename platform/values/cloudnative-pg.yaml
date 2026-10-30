@@ -1,3 +1,7 @@
+# The operator decides failovers: it must not sit on a dead node for 5 minutes.
+tolerations:
+  - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+  - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
 resources:
   requests: { cpu: 25m, memory: 96Mi }
   limits: { memory: 256Mi }

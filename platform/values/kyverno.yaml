@@ -1,4 +1,4 @@
-# The policy engine. One replica of each controller is plenty locally.
+# The policy engine, sized for a laptop.
 config:
   webhooks:
     # Kyverno only sees application namespaces (label slipway.dev/policy=restricted). Its
@@ -7,8 +7,15 @@ config:
     namespaceSelector:
       matchLabels:
         slipway.dev/policy: restricted
+# Two admission controllers on different nodes, leaving a dead node after 30 s: chaos day
+# showed that with one replica on the lost node, its fail-closed webhook blocked the
+# eviction (a DELETE) of the app's pods on that node, so they were never replaced.
 admissionController:
-  replicas: 1
+  replicas: 2
+  podDisruptionBudget: { enabled: true, minAvailable: 1 }
+  tolerations:
+    - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+    - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
   container:
     resources:
       requests: { cpu: 50m, memory: 128Mi }

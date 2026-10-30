@@ -1,0 +1,31 @@
+# What the gateway does when a shortener pod stops answering. Chaos day (node loss): with
+# Envoy Gateway's controller on the lost node too, Envoy kept its last list of endpoints
+# and sent half of the traffic to the dead node's pods for minutes (503s, and 10 s connect
+# timeouts). Now Envoy fails a connection fast, retries it on another pod, and stops using
+# a pod whose connections keep failing, on its own, without waiting for its control plane.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: shortener
+  namespace: shortener
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: shortener }
+  timeout:
+    tcp: { connectTimeout: 1s } # Envoy's default is 10 s
+  retry:
+    numRetries: 2
+    retryOn:
+      # only when the request never reached the app, so retrying a POST is safe
+      triggers: [connect-failure, refused-stream]
+    perRetry:
+      backOff: { baseInterval: 50ms, maxInterval: 500ms }
+  healthCheck:
+    passive:
+      splitExternalLocalOriginErrors: true
+      consecutiveLocalOriginFailures: 3 # connect failures and timeouts
+      consecutiveGatewayErrors: 3
+      consecutive5XxErrors: 1000 # an app 500 is not a dead pod (see the bad-release experiment)
+      interval: 5s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50

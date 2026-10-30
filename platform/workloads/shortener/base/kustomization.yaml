@@ -8,3 +8,4 @@ resources:
   - scaling.yaml
   - monitoring.yaml
   - route.yaml
+  - traffic-policy.yaml

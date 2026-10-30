@@ -22,6 +22,7 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              operations: [CREATE, UPDATE] # never DELETE: see docs/postmortems/2026-10-30-chaos-day.md
               # application namespaces; platform namespaces run upstream images
               namespaceSelector:
                 matchLabels: { slipway.dev/policy: restricted }

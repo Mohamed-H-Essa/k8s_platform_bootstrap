@@ -19,18 +19,20 @@ spec:
       interval: 30s
       rules:
         # ---- availability: share of requests that failed with a 5xx ----
+        # (`or vector(0)`: with no 5xx at all the numerator has no series, and the ratio
+        # would be missing instead of 0: no data on the dashboard, nothing to alert on)
         - record: slo:sli_error:ratio_rate5m
           labels: { slo: availability }
-          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[5m])) / sum(rate(shortener_http_requests_total[5m]))
+          expr: (sum(rate(shortener_http_requests_total{code=~"5.."}[5m])) or vector(0)) / sum(rate(shortener_http_requests_total[5m]))
         - record: slo:sli_error:ratio_rate30m
           labels: { slo: availability }
-          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[30m])) / sum(rate(shortener_http_requests_total[30m]))
+          expr: (sum(rate(shortener_http_requests_total{code=~"5.."}[30m])) or vector(0)) / sum(rate(shortener_http_requests_total[30m]))
         - record: slo:sli_error:ratio_rate1h
           labels: { slo: availability }
-          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[1h])) / sum(rate(shortener_http_requests_total[1h]))
+          expr: (sum(rate(shortener_http_requests_total{code=~"5.."}[1h])) or vector(0)) / sum(rate(shortener_http_requests_total[1h]))
         - record: slo:sli_error:ratio_rate6h
           labels: { slo: availability }
-          expr: sum(rate(shortener_http_requests_total{code=~"5.."}[6h])) / sum(rate(shortener_http_requests_total[6h]))
+          expr: (sum(rate(shortener_http_requests_total{code=~"5.."}[6h])) or vector(0)) / sum(rate(shortener_http_requests_total[6h]))
         # ---- latency: share of requests slower than 300 ms ----
         - record: slo:sli_error:ratio_rate5m
           labels: { slo: latency }

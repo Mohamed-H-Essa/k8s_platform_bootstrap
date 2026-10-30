@@ -18,6 +18,7 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              operations: [CREATE, UPDATE]
               namespaceSelector:
                 matchLabels: { slipway.dev/policy: restricted }
       verifyImages:

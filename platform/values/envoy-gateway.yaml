@@ -1,5 +1,18 @@
 # The Gateway API implementation (ingress-nginx was retired in 2026).
+# Two controllers that leave a dead node after 30 s (default 5 minutes). Chaos day: the
+# only controller was on the lost node, so the Envoys kept routing to that node's pods.
 deployment:
+  replicas: 2
+  pod:
+    tolerations:
+      - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+      - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels: { app.kubernetes.io/name: gateway-helm }
   envoyGateway:
     resources:
       requests: { cpu: 50m, memory: 96Mi }

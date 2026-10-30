@@ -16,6 +16,7 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              operations: [CREATE, UPDATE] # never DELETE: see docs/postmortems/2026-10-30-chaos-day.md
               namespaceSelector:
                 matchLabels: { slipway.dev/policy: restricted }
       validate:

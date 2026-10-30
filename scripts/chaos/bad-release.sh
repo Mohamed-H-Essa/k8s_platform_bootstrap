@@ -47,7 +47,7 @@ t_am=$(( $(now) - t0 ))
 log "bad-release: Alertmanager has the page at +${t_am}s"
 
 # ---- roll back: the runbook's first step ----
-git revert --no-edit HEAD >/dev/null
+git revert --no-edit "$bad_sha" >/dev/null # that commit, whatever came after it
 log "bad-release: git revert $bad_sha → $(git rev-parse --short HEAD), publishing"
 make --no-print-directory publish >/dev/null
 t_rb=$(now)
