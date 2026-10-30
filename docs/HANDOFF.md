@@ -348,3 +348,19 @@ Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothin
 - Offline tip: `terraform init` downloads the AWS provider (large). To reuse a local copy, point
   `TF_CLI_CONFIG_FILE` at a `provider_installation { filesystem_mirror { … } }` config (per-file symlinks
   work; directory symlinks are not followed).
+- 11:00–12:20 (second agent): etcd `unsafe-no-fsync` (laptop fsync ~50 ms stalled the API server);
+  OrbStack was stopped once mid-session (pods recovered; **CoreDNS had to be restarted** before pods
+  could resolve `slipway-git` again); Envoy is now a DaemonSet locally (NodePort on the control
+  plane timed out when forwarded across nodes); gateway/policies split per env (aws: NLB, keyless
+  CI signatures). **Merged `slipway-aws-ci`** (fast-forward). Measured so far: `make load` 2 min
+  at 50 req/s: 6031 requests, 0 failed, p95 168.5 ms, p99 411 ms (host load avg ~20). Release
+  under load: pipeline 43–45 s, rollout 35–48 s after publish, 0 failed requests (2 runs).
+- **Chaos day run 1** (`.local/chaos/20261030-115711/`): release OK; pod kill: 4/4 ready in 12 s,
+  0 failed; **node loss failed**: 8,778 of 18,140 requests failed (48 %) for 6 min 3 s (12:05:09 →
+  12:11:12) because Envoy Gateway's controller was on the stopped node (stale endpoints until it was
+  rescheduled at +5m47s) and Kyverno's webhook (also on that node) refused the eviction DELETE of the
+  app's pods, so they were never replaced; the app's own metrics showed zero 5xx. Fixed in commit
+  "chaos day fixes" (BackendTrafficPolicy, HA + 30 s tolerations, Kyverno CREATE/UPDATE only,
+  SLO `or vector(0)`). **Next:** re-run `scripts/chaos/run-all.sh node-loss db-failover bad-release`,
+  then measure warm/cold `make up`, write postmortem + numbers into README/interview guide
+  (placeholders `NUMBERS`, `{{…}}`), delete old docs (done in working tree), commit, push, CI.

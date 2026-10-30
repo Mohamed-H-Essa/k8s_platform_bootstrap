@@ -1,242 +1,149 @@
-# K8s Platform Bootstrap
+# Slipway
 
-Production-grade EKS cluster deployment with GitOps, observability, and automatic TLS.
+[![ci](https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/actions/workflows/ci.yml/badge.svg)](https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/actions/workflows/ci.yml)
 
-**Deploy a full production EKS cluster in under 12 minutes from a single `terraform apply`.**
+**A production-style GitOps platform that runs entirely on a laptop.** One command builds a
+three-node Kubernetes cluster with Terraform, and Argo CD installs the rest from Git: a Gateway API
+entry point, signed-image admission, metrics/logs/traces with SLO burn-rate alerts, and a
+highly available Postgres. A small Go service runs on it, and a chaos day breaks it on purpose
+under load and measures the recovery.
 
-## Features
-
-- **EKS Cluster**: Production-ready Kubernetes cluster on AWS
-- **GitOps (ArgoCD)**: Declarative continuous deployment
-- **Observability**: Prometheus Stack (Prometheus + Grafana + AlertManager)
-- **Automatic TLS**: Cert-Manager with Let's Encrypt integration
-- **Namespace Isolation**: Built-in multi-tenancy support
-- **Helm Charts**: Reusable, version-controlled package management
+No cloud account needed. The AWS version of the same design is written in Terraform and checked
+offline (`validate`, `tflint`, `trivy config`), but has never been applied: there is no AWS account
+behind this project.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+  dev([make release]) -->|build · Trivy · Syft SBOM · cosign| reg[(registry)]
+  dev -->|commit · make publish| git[(Git server)]
+  subgraph docker[Docker network 'kind']
+    reg
+    git
+    caches[(pull-through caches)]
+    subgraph k8s[kind: 1 control plane + 2 workers]
+      argo[Argo CD · app of apps] -->|sync waves| plat
+      subgraph plat[platform]
+        gw[Envoy Gateway]
+        kyv[Kyverno: signed + SBOM only]
+        obs[Prometheus · Grafana · Loki · Tempo · OTel]
+        cnpg[CloudNativePG]
+      end
+      subgraph ns[namespace shortener]
+        sho[shortener ×2–6] --> db[(Postgres primary + replica)]
+      end
+    end
+  end
+  git --> argo
+  reg -->|verified digest| sho
+  caches -.-> k8s
+  user([browser · k6]) -->|*.localtest.me| gw --> sho
+  sho -.->|metrics · traces · logs| obs
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    AWS Infrastructure                   │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │            EKS Cluster (Terraform)               │   │
-│  │  ┌────────────────────────────────────────────┐  │   │
-│  │  │        ArgoCD (GitOps Controller)          │  │   │
-│  │  │  ┌──────────────────────────────────────┐  │  │   │
-│  │  │  │  Prometheus Stack (Monitoring)       │  │  │   │
-│  │  │  │  Cert-Manager (TLS Automation)       │  │  │   │
-│  │  │  │  Application Workloads               │  │  │   │
-│  │  │  └──────────────────────────────────────┘  │  │   │
-│  │  └────────────────────────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
 
-## 📚 Documentation
+More: [docs/architecture.md](docs/architecture.md) and the decision records in [docs/adr/](docs/adr/).
 
-**New to Kubernetes and AWS?** Start with our **Beginner's Guide**:
-- **[📘 Beginner's Guide](docs/BEGINNERS_GUIDE.md)** - Learn all the concepts from scratch
-- **[🚀 Quick Start](docs/QUICK_START.md)** - Deploy in 12 minutes
-- **[📋 Complete Workflow](docs/WORKFLOW.md)** - Step-by-step deployment guide
+## Quick start
 
-**Understand the code**:
-- **[🏗️ Terraform Explained](docs/TERRAFORM_EXPLAINED.md)** - Line-by-line module explanations
-- **[☸️ Kubernetes Manifests Explained](docs/KUBERNETES_MANIFESTS_EXPLAINED.md)** - YAML breakdown
-- **[🔄 ArgoCD Explained](docs/ARGOCD_EXPLAINED.md)** - GitOps deep dive
-- **[🏢 Architecture](docs/ARCHITECTURE.md)** - System design
-
-**Detailed guides**:
-- **[📖 Deployment Guide](docs/DEPLOYMENT.md)** - Comprehensive deployment instructions
-
-## Quick Start
+Requirements: Docker with **8 GB** of memory (OrbStack, Docker Desktop or Colima), about 15 GB of
+disk, and `make`, `terraform` (≥ 1.5), `kubectl`, `helm`, `yq`, `jq`, `trivy`, `syft`, `cosign`,
+`k6`, `git`. Go is only needed for `make test`. Port 80 on `127.0.0.1` must be free.
 
 ```bash
-# Clone the repository
-git clone https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap
-cd k8s_platform_bootstrap
-
-# Configure AWS credentials
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_REGION="us-west-2"
-
-# Deploy infrastructure
-cd terraform/environments/prod
-terraform init
-terraform plan
-terraform apply
-
-# Configure kubectl
-aws eks update-kubeconfig --name prod-cluster --region us-west-2
-
-# Verify deployment
-kubectl get nodes
-kubectl get pods -A
+make up        # cluster, registry, caches, Git, Argo CD, then the whole platform from Git
+make smoke     # create a short link through the gateway, follow it, check the UIs
+make unsigned  # try to run an unsigned image: Kyverno refuses it
+make load      # 2 minutes of k6 traffic against the SLOs
+make release   # build, scan, sign and ship a new version through Git
+make chaos     # chaos day: pod kill, node loss, database failover, bad release
+make down      # delete the cluster (image caches stay warm)
 ```
 
-## Project Structure
+| What | Where |
+|---|---|
+| Shortener | http://sho.localtest.me (`POST /api/links {"url": "https://…"}`) |
+| Grafana | http://grafana.localtest.me (dashboard **Shortener · service and SLOs**; anonymous viewer) |
+| Argo CD | http://argocd.localtest.me (`admin`, password from `make urls`) |
+| Prometheus | http://prometheus.localtest.me |
+
+`*.localtest.me` is public DNS that resolves to `127.0.0.1`; kind maps port 80 to the gateway.
+
+## Measured on a laptop
+
+<!-- numbers: filled in from real runs only -->
+NUMBERS
+
+## How it works
+
+**GitOps.** Terraform creates the cluster and installs exactly two things: Argo CD and one root
+Application. The root renders [`platform/apps`](platform/apps), a Helm chart with one Application
+per component in sync waves (operators and CRDs → what builds on them → the workload). Locally Argo
+CD pulls from a Git server next to the cluster ([why](docs/adr/git-server-next-to-the-cluster.md));
+`make publish` pushes your commits there. Manual changes in the cluster are reverted by self-heal.
+
+**Release.** `make release` builds the image, fails on fixable HIGH/CRITICAL vulnerabilities
+(Trivy), pushes it, writes an SPDX SBOM (Syft), signs the image and attests the SBOM (cosign), then
+commits the new tag and publishes. Argo CD rolls it out with no lost capacity
+(`maxUnavailable: 0`), and the pods drain gracefully. Rolling back is `git revert`.
+
+**Supply chain.** In application namespaces Kyverno admits images from the platform registry only
+if they are signed by the release key **and** carry a signed SBOM attestation, and pins the tag to
+the verified digest (on AWS: signed keyless by this repo's CI on `main`). Those namespaces also get
+a baseline: pinned versions, requests and limits, non-root.
+([ADR](docs/adr/signed-images-with-kyverno-and-cosign.md))
+
+**SLOs.** Availability 99.5 % and latency 95 % < 300 ms, as multi-window burn-rate alerts (page at
+14.4× over 1 h and 5 m, ticket at 6× over 6 h and 30 m), with a dashboard, exemplars that open the
+trace, and runbooks. ([docs/slo.md](docs/slo.md))
+
+**Resilience.** Two to six replicas spread over nodes, a PDB, 30-second eviction from dead nodes,
+an Envoy on every node, Postgres with a streaming replica and automatic failover, and an app that
+fails fast (503) instead of hanging when the database is switching.
+
+**CI** ([`.github/workflows`](.github/workflows)). `ci.yml` on every push: Go vet and race tests,
+image build → Trivy gate → Syft SBOM, Terraform fmt/validate for both environments plus tflint and
+`trivy config` for AWS, the manifest lint (`scripts/lint-manifests.sh`: every Helm render and
+Kustomize directory through kubeconform), and actionlint. On `main` it pushes the image to GHCR and
+signs it and its SBOM keyless with cosign (GitHub OIDC; no stored keys). `e2e.yml` (manual and
+weekly) runs the real thing on a GitHub runner: `make up`, `make smoke`, `make unsigned`.
+
+## Local and AWS
+
+| | Local (runs) | AWS (written, validated offline, never applied) |
+|---|---|---|
+| Cluster | kind, 3 nodes in Docker | EKS, spot workers + a small on-demand system group |
+| Built by | `infra/terraform/envs/local` | `infra/terraform/envs/aws` |
+| Git source | soft-serve next to the cluster | GitHub |
+| Images | local registry, key-signed by `make release` | GHCR, signed keyless by CI |
+| Entry point | an Envoy on every node, NodePort → `127.0.0.1:80` | two Envoys behind an NLB |
+| Signature gate | release key from `.local/` | keyless: GitHub OIDC identity of `ci.yml` on `main` |
+| Platform | the same `platform/` tree, `env: local` | the same tree, `env: aws` |
+
+## Repository map
 
 ```
-k8s-platform-bootstrap/
-├── terraform/
-│   ├── modules/              # Reusable Terraform modules
-│   │   ├── eks/             # EKS cluster module
-│   │   ├── vpc/             # VPC networking module
-│   │   ├── iam/             # IAM roles and policies
-│   │   └── security-groups/ # Security group configurations
-│   └── environments/        # Environment-specific configs
-│       ├── dev/
-│       ├── staging/
-│       └── prod/
-├── kubernetes/
-│   ├── bootstrap/           # Initial cluster setup
-│   │   └── argocd/         # ArgoCD installation manifests
-│   ├── manifests/          # Kubernetes manifests
-│   │   ├── monitoring/     # Prometheus Stack
-│   │   ├── cert-manager/   # Cert-Manager
-│   │   └── namespaces/     # Namespace definitions
-│   └── helm-charts/        # Custom Helm charts
-└── scripts/                # Utility scripts
-    ├── setup.sh           # Initial setup script
-    └── destroy.sh         # Cleanup script
+Makefile                         every entry point (make help)
+app/                             the Go service (URL shortener) and its Dockerfile
+infra/terraform/envs/local/      kind + registry + caches + Git server + Argo CD
+infra/terraform/envs/aws/        the AWS environment (validated offline)
+platform/apps/                   the app of apps (Helm chart, sync waves)
+platform/values/                 values per component, plus per-environment overrides
+platform/gateway/                the shared Gateway and routes (base) + Envoy per environment
+platform/policies/               Kyverno policies: shared baseline + signature gate per environment
+platform/observability/          SLO rules and the Grafana dashboard
+platform/workloads/shortener/    the workload: base + overlays (local, aws)
+scripts/                         release, wait, smoke, unsigned, load (k6), chaos/
+docs/                            architecture, SLOs, runbooks, ADRs, chaos day, postmortem
 ```
 
-## Prerequisites
-
-- **Terraform** >= 1.5.0
-- **kubectl** >= 1.28
-- **Helm** >= 3.12
-- **AWS CLI** >= 2.13
-- **AWS Account** with appropriate permissions
-
-## Deployment Steps
-
-### 1. Infrastructure (Terraform)
-- VPC with public/private subnets
-- EKS cluster with managed node groups
-- IAM roles and service accounts (IRSA)
-- Security groups and network policies
-
-### 2. GitOps Setup (ArgoCD)
-- Install ArgoCD
-- Configure repository access
-- Deploy applications via GitOps
-
-### 3. Observability (Prometheus Stack)
-- Deploy kube-prometheus-stack
-- Configure Grafana dashboards
-- Set up AlertManager rules
-
-### 4. TLS Automation (Cert-Manager)
-- Install Cert-Manager
-- Configure Let's Encrypt issuers
-- Set up automatic certificate provisioning
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Required
-export AWS_ACCESS_KEY_ID="your-key"
-export AWS_SECRET_ACCESS_KEY="your-secret"
-export AWS_REGION="us-west-2"
-
-# Optional
-export TF_VAR_cluster_name="prod-cluster"
-export TF_VAR_environment="production"
-```
-
-### Terraform Variables
-
-Key variables in `terraform/environments/prod/terraform.tfvars`:
-
-```hcl
-cluster_name    = "prod-cluster"
-cluster_version = "1.28"
-environment     = "production"
-region          = "us-west-2"
-
-node_groups = {
-  general = {
-    instance_types = ["m5.large"]
-    min_size       = 2
-    max_size       = 10
-    desired_size   = 3
-  }
-}
-```
-
-## Cost Estimation
-
-Estimated monthly costs for a production setup (us-west-2):
-
-- **EKS Control Plane**: $72/month
-- **Node Groups** (3x m5.large): ~$260/month
-- **NAT Gateway** (2x): $64/month + data transfer
-- **Load Balancers**: ~$40/month
-- **Total**: ~$436/month + data transfer
-
-## Security Best Practices
-
-- Private subnets for worker nodes
-- AWS IAM Authenticator for cluster authentication
-- IRSA (IAM Roles for Service Accounts)
-- Network policies for pod-to-pod communication
-- Secrets encryption at rest with AWS KMS
-- RBAC enabled by default
-
-## Maintenance
-
-### Update Cluster Version
-```bash
-# Update cluster_version in terraform.tfvars
-terraform apply
-```
-
-### Scale Node Groups
-```bash
-# Modify desired_size in terraform.tfvars
-terraform apply
-```
-
-### Add New Application
-1. Create manifest in `kubernetes/manifests/`
-2. Commit and push to repository
-3. ArgoCD automatically syncs changes
-
-## Troubleshooting
-
-### Common Issues
-
-1. **kubectl connection issues**
-   ```bash
-   aws eks update-kubeconfig --name prod-cluster --region us-west-2
-   ```
-
-2. **Terraform state lock**
-   ```bash
-   terraform force-unlock <LOCK_ID>
-   ```
-
-3. **ArgoCD not syncing**
-   ```bash
-   argocd app sync <app-name>
-   ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+## Docs
+- [Architecture](docs/architecture.md) · [Decision records](docs/adr/)
+- [SLOs](docs/slo.md) · Runbooks: [SLO burn](docs/runbooks/slo-burn.md),
+  [database failover](docs/runbooks/database-failover.md)
+- [AWS environment](docs/aws.md) (written and validated offline, never applied)
+- [Chaos day](docs/chaos-day.md) and its [postmortem](docs/postmortems/2026-10-30-chaos-day.md)
+- [Interview guide](docs/interview-guide.md): how to explain this project in 60 seconds or 5 minutes
 
 ## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Support
-
-- **Issues**: GitHub Issues
-- **Documentation**: [docs/](docs/)
-- **Email**: your-email@example.com
+MIT, see [LICENSE](LICENSE).

@@ -116,14 +116,6 @@ Below the gate (MEDIUM/LOW), left on purpose, all for cost:
 
 ## Not done (what a real deployment still needs)
 
-- **Gateway on AWS**: `platform/gateway` sets the Envoy service to NodePort 30080 for kind. On
-  EKS it should be a `LoadBalancer` (NLB) service, which needs an env-specific variant of
-  `platform/gateway` (today it is one directory for both environments).
-- **Image verification on AWS**: the Kyverno policy verifies `slipway-registry:5000/*` with the
-  local public key. CI signs `ghcr.io/mohamed-h-essa/shortener` keyless, so EKS needs a second
-  rule: keyless attestor with subject
-  `https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/.github/workflows/ci.yml@refs/heads/main`
-  and issuer `https://token.actions.githubusercontent.com`.
 - **DNS and TLS**: no Route 53 records, certificates or cert-manager; `var.domain` is
   `example.com`.
 - **Logs and traces storage**: Loki and Tempo keep data on volumes; on AWS they would use S3
@@ -132,3 +124,8 @@ Below the gate (MEDIUM/LOW), left on purpose, all for cost:
   from the schedule.
 - **Release tag**: CI tags images `sha-<commit>` and `main`; the `aws` overlay still pins
   `0.1.0`. Nothing bumps it automatically.
+
+Done since (in `platform/`): the gateway is per environment (`platform/gateway/aws`: two Envoy
+replicas across zones behind an NLB, PDB), and the signature gate on AWS verifies the keyless
+signature and SBOM attestation from `ci.yml` on `main` (`platform/policies/aws`, issuer
+`https://token.actions.githubusercontent.com`, Rekor).
