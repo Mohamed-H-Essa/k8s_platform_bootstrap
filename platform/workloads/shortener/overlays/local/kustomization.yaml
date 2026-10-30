@@ -6,4 +6,4 @@ resources:
 images:
   - name: shortener
     newName: slipway-registry:5000/shortener
-    newTag: 0.1.0
+    newTag: dbf6c20-102308
