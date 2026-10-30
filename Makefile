@@ -9,7 +9,7 @@ export KUBECONFIG := $(LOCAL)/kubeconfig
 # the active Docker context's socket (OrbStack, Docker Desktop, Colima…), for Terraform
 DOCKER_SOCK ?= $(shell docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)
 TAG        ?= $(shell yq '.images[0].newTag' $(OVERLAY))
-GIT_SSH    := ssh -i $(LOCAL)/git_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p 23231
+GIT_SSH    := ssh -i $(LOCAL)/git_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p 23231
 
 .PHONY: help
 help: ## list the targets
