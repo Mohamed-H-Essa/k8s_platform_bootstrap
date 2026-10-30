@@ -156,5 +156,8 @@ docs/                            architecture, SLOs, runbooks, ADRs, chaos day, 
 - [Chaos day](docs/chaos-day.md) and its [postmortem](docs/postmortems/2026-10-30-chaos-day.md)
 - [Interview guide](docs/interview-guide.md): how to explain this project in 60 seconds or 5 minutes
 
+## Contact
+Mohamed H. Essa · me@mecodes.live · issues welcome on GitHub.
+
 ## License
 MIT, see [LICENSE](LICENSE).
