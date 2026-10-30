@@ -64,6 +64,10 @@ server:
     requests: { cpu: 50m, memory: 96Mi }
     limits: { memory: 256Mi }
 redis:
+  # the chart pulls Redis from ECR Public, which refused the pull on a GitHub runner (e2e);
+  # the same image from Docker Hub goes through the docker.io cache like everything else
+  image:
+    repository: docker.io/library/redis
   resources:
     requests: { cpu: 25m, memory: 32Mi }
     limits: { memory: 128Mi }
