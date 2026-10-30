@@ -1,4 +1,7 @@
-# The operator decides failovers: it must not sit on a dead node for 5 minutes.
+# The operator decides failovers. Chaos day run 3: its only replica was restarting on an
+# overloaded node when the primary was killed, and nothing promoted the replica for over
+# 5 minutes. Two replicas (leader election), and it leaves a dead node after 30 s.
+replicaCount: 2
 tolerations:
   - { key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }
   - { key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 30 }

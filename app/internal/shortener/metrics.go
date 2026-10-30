@@ -10,8 +10,10 @@ import (
 )
 
 // The two SLIs live here (see platform/observability/slo-rules.yaml):
-//   availability = requests without a 5xx / all requests
-//   latency      = requests answered within 300 ms / all requests
+//
+//	availability = requests without a 5xx / all requests
+//	latency      = requests answered within 300 ms / all requests
+//
 // so 0.3 must stay a bucket boundary.
 var latencyBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.5, 1, 2.5}
 

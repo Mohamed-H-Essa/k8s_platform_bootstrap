@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,6 +14,9 @@ import (
 // Postgres is the production Store. CloudNativePG gives it a read-write Service that
 // always points at the current primary, so a failover is a reconnect, not a config change.
 type Postgres struct{ pool *pgxpool.Pool }
+
+// queryTimeout bounds every call to the database, including waiting for a connection.
+const queryTimeout = 2 * time.Second
 
 const schema = `
 CREATE TABLE IF NOT EXISTS links (
@@ -29,6 +33,9 @@ func NewPostgres(ctx context.Context, dsn string) (*Postgres, error) {
 		return nil, fmt.Errorf("parse dsn: %w", err)
 	}
 	cfg.MaxConns = 10
+	// fail fast while the database fails over: a request should get a 503 in about two
+	// seconds, not hang until the client gives up (chaos day: k6 timed out at 5 s instead)
+	cfg.ConnConfig.ConnectTimeout = 2 * time.Second
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect: %w", err)
@@ -43,6 +50,8 @@ func NewPostgres(ctx context.Context, dsn string) (*Postgres, error) {
 func (p *Postgres) Close() { p.pool.Close() }
 
 func (p *Postgres) Create(ctx context.Context, code, url string) (Link, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
 	var l Link
 	err := p.pool.QueryRow(ctx,
 		`INSERT INTO links (code, url) VALUES ($1, $2) RETURNING code, url, created_at, hits`,
@@ -55,6 +64,8 @@ func (p *Postgres) Create(ctx context.Context, code, url string) (Link, error) {
 }
 
 func (p *Postgres) Resolve(ctx context.Context, code string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
 	var url string
 	err := p.pool.QueryRow(ctx,
 		`UPDATE links SET hits = hits + 1 WHERE code = $1 RETURNING url`, code).Scan(&url)
@@ -65,6 +76,8 @@ func (p *Postgres) Resolve(ctx context.Context, code string) (string, error) {
 }
 
 func (p *Postgres) Get(ctx context.Context, code string) (Link, error) {
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
 	var l Link
 	err := p.pool.QueryRow(ctx,
 		`SELECT code, url, created_at, hits FROM links WHERE code = $1`, code).
