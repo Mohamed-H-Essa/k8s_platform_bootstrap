@@ -374,3 +374,8 @@ Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothin
 - 15:05: **`e2e.yml` green** (run 41055776749): cold `make up` on a fresh GitHub runner in 10 min 22 s,
   then `make smoke` and `make unsigned` pass. `ci.yml` green. Remaining: the bad-release and
   database-failover re-runs (see "What is next" above), section 5G (portfolio, CV, PR kit).
+- 15:10: the kind node containers were stopped by the coordinator (the owner's laptop was
+  overloaded); registry, caches and Git server still run. Start again with `make up` (or
+  `docker start slipway-control-plane slipway-worker slipway-worker2`, then restart CoreDNS if pods
+  cannot resolve `slipway-git`). Still needs a cluster: the bad-release run (time to page, revert to
+  clean) and a clean database-failover re-run.
