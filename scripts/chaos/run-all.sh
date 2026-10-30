@@ -33,4 +33,5 @@ kill -INT $K6 && wait $K6 || true
 trap - EXIT
 log "chaos day done. Results:"
 column -t -s $'\t' "$OUT/results.tsv" | tee -a "$OUT/timeline.log"
-sed -n '/checks\|http_req_duration\|http_req_failed\|http_reqs/p' "$OUT/k6.log" | tee -a "$OUT/timeline.log" || true
+jq -r '.metrics | "k6 overall: \(.http_reqs.count) requests, \(.http_req_failed.passes // 0) failed, p95 \(.http_req_duration["p(95)"] | floor) ms, p99 \(.http_req_duration["p(99)"] | floor) ms"' \
+  "$OUT/k6-summary.json" | tee -a "$OUT/timeline.log" || true
