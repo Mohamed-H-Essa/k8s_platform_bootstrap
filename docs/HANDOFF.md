@@ -45,7 +45,8 @@ is written in Terraform and checked offline (`validate`, `tflint`, `trivy config
 | `platform/workloads/shortener/` | base (namespace, CNPG Cluster ×2, Deployment, Service, HPA+PDB, ServiceMonitor, HTTPRoute) + overlays `local` (registry `slipway-registry:5000`, tag `0.1.0`) and `aws` (GHCR). `kubectl kustomize` renders OK. |
 | `Makefile` | Written. Calls scripts that **don't exist yet** (see §5). |
 | `scripts/` | **To write** (old `scripts/setup.sh`, `scripts/destroy.sh` are from the old repo → delete). |
-| AWS env, CI, README, docs, chaos day | **To do** (§5). |
+| AWS env (`infra/terraform/envs/aws`, `modules/`), CI (`.github/workflows/`), `scripts/lint-manifests.sh` | **Done** on branch `slipway-aws-ci` (offline: `make aws-check`, `make ci-lint`, lint-manifests all pass). See §10. |
+| README, docs, chaos day | **To do** (§5). |
 | Old repo content | `terraform/` (custom VPC + EKS modules, prod env), `kubernetes/`, old docs (`docs/*_EXPLAINED.md`, `BEGINNERS_GUIDE.md`, `PROJECT_SUMMARY.md`, `DOCUMENTATION_OVERVIEW.md`, `CONTRIBUTING.md`): **replace**. Reuse ideas from `terraform/modules/{vpc,eks}` for the AWS env, then delete the old tree. Keep `LICENSE`. |
 
 Nothing is committed yet except `.gitignore` changes (see §8 for the commit plan). **Do not push to GitHub
@@ -191,7 +192,7 @@ until the platform works end to end and CI is green locally (actionlint)**: the 
 Write `docs/chaos-day.md` (how to run) and `docs/postmortems/2026-10-30-chaos-day.md` (blameless format:
 summary, impact, timeline with real timestamps, what went well, what didn't, action items).
 
-### C. AWS environment (offline-validated)
+### C. AWS environment (offline-validated) — DONE (branch `slipway-aws-ci`, §10, `docs/aws.md`)
 `infra/terraform/envs/aws` + `infra/terraform/modules/{vpc,eks,...}` (reuse/clean the old custom modules or use
 terraform-aws-modules; justify in an ADR): VPC (3 AZ, private nodes, 1 NAT for cost), EKS 1.35 with a **spot**
 managed node group (+ small on-demand system group), **scheduled scale-down** at night
@@ -200,7 +201,7 @@ keys), **AWS Budgets** alarm, S3 backend example with DynamoDB lock, Argo CD boo
 `repoURL` = GitHub). `make aws-check` = `terraform init -backend=false && validate`, tflint (docker), `trivy
 config`. All clean. No apply.
 
-### D. CI (`.github/workflows/`), must pass `actionlint`
+### D. CI (`.github/workflows/`), must pass `actionlint` — DONE (branch `slipway-aws-ci`, §10; not run on GitHub yet)
 - `ci.yml`: Go vet/test, build image, Trivy scan, Syft SBOM, on `main` push to GHCR and **keyless** cosign sign
   + attest (GitHub OIDC), Terraform fmt/validate (both envs), manifest lint.
 - `e2e.yml` (manual + weekly): kind in CI, `make up` (maybe a smaller profile), `make smoke`, `make unsigned`.
@@ -310,3 +311,40 @@ each area; the first commit can be "WIP: Slipway rebuild (app, local infra, GitO
   of the limit → GC storm at 384Mi), no stock dashboards; server-side diff only on our 4 dir apps;
   Kyverno reports controller off; Alloy reads `/var/log/pods` instead of API log streams; Argo CD
   repo-server/server probes 10 s timeouts (they were liveness-killed), Git polling 180 s.
+
+---
+
+## 10. AWS/CI agent notes (2026-10-30; scope 5C, 5D, `scripts/lint-manifests.sh`)
+
+Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothing pushed to GitHub.
+
+- **AWS env** (`infra/terraform/envs/aws` + own modules `modules/{vpc,eks,github-oidc}`, old `terraform/`
+  tree deleted): 3-AZ VPC, private /19 node subnets, one NAT, S3 endpoint; EKS 1.35 (access entries, KMS for
+  Secrets, standard support only, managed add-ons, EBS CSI via **Pod Identity**); `system` on-demand group +
+  `apps` **spot** group (label `slipway.dev/pool=apps`, like the kind workers), IMDSv2-only launch templates,
+  `aws_autoscaling_schedule` night scale-down of `apps`; GitHub OIDC role (main only; describe one cluster,
+  view namespace `shortener`); Budgets alert; S3 backend (`backend "s3" {}` + `backend.hcl.example`, DynamoDB
+  lock); Argo CD + root app via `argocd-apps` with `helm.valuesObject` `{repoURL: GitHub, revision: main,
+  env: aws}`. No `platform/values/aws/` files were needed. Docs: `docs/aws.md`, ADRs `aws-modules`,
+  `eks-pod-identity`, `aws-cost-controls`, `ci-keyless-signing`.
+- **`make aws-check`** (mk/aws.mk): validate OK; tflint v0.65.0 in Docker (Terraform recommended + AWS ruleset
+  0.50.0, plugin cached in `.local/tflint-plugins`) 0 issues; `trivy config` HIGH/CRITICAL 0. One accepted
+  finding inline: `#trivy:ignore:AWS-0040` (public API endpoint, CIDR-limited). Trivy 0.70 IDs are `AWS-xxxx`.
+  **`make ci-lint`** = actionlint: clean (shellcheck on).
+- **`scripts/lint-manifests.sh`**: helm template `platform/apps` (env=local and aws) + `kubectl kustomize` of
+  every kustomization dir → `kubeconform -strict` (k8s 1.35.0 + datreeio CRD catalog): all valid, 0 skipped.
+- **Workflows**: `ci.yml` (go, image: build → Trivy → Syft SBOM artifact, terraform: fmt + validate both envs +
+  `make aws-check`, manifests, actionlint; on main `publish` pushes the scanned image tar to
+  `ghcr.io/mohamed-h-essa/shortener`, cosign **v2.6.5** keyless sign + SPDX attest + verify; `aws` job only if
+  repo variable `AWS_ROLE_ARN` is set). `e2e.yml` (manual + weekly): full `make up` on `ubuntu-24.04`, then
+  `make smoke`, `make unsigned`; needs `fetch-depth: 0` because `make publish` pushes HEAD. Neither has run on
+  GitHub yet: check both after the first push (`gh run watch`).
+- **Follow-ups for the platform side** (not done, they touch `platform/`): (1) `platform/gateway` is NodePort
+  30080 for both envs; AWS needs a LoadBalancer EnvoyProxy (env-specific gateway dir or overlay).
+  (2) Kyverno verifies only `slipway-registry:5000/*` with the local key; AWS needs a keyless rule for
+  `ghcr.io/mohamed-h-essa/*` (subject `https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/.github/workflows/ci.yml@refs/heads/main`,
+  issuer `https://token.actions.githubusercontent.com`). (3) the `aws` overlay pins tag `0.1.0`; CI tags
+  `sha-<commit>` and `main`. Listed in `docs/aws.md` § "Not done".
+- Offline tip: `terraform init` downloads the AWS provider (large). To reuse a local copy, point
+  `TF_CLI_CONFIG_FILE` at a `provider_installation { filesystem_mirror { … } }` config (per-file symlinks
+  work; directory symlinks are not followed).
