@@ -276,3 +276,29 @@ docs/                            this handoff + (to do) architecture, slo, runbo
 ## 8. Commit plan / git state
 Working tree has untracked `Makefile app/ infra/ platform/` and a modified `.gitignore`. Commit as you finish
 each area; the first commit can be "WIP: Slipway rebuild (app, local infra, GitOps tree)".
+
+---
+
+## 9. Progress log (second agent, 2026-10-30; scope 5A, 5B, 5E, 5F)
+
+- 09:30 base images present. Scripts written: `release-image.sh`, `wait-healthy.sh`, `smoke.sh`,
+  `try-unsigned.sh`, `load.js`, `chaos/{lib,pod-kill,node-loss,db-failover,bad-release,run-all}.sh`.
+- Fixes found by running `make up` (all committed):
+  - kind v0.31's node image writes a **version 2** containerd config → registry key is
+    `plugins."io.containerd.grpc.v1.cri".registry` (verified: `config_path` is set in the nodes).
+  - OrbStack adds `log_opts` to containers → `lifecycle { ignore_changes = [log_opts] }`; `terraform
+    plan` is now a no-op after apply.
+  - macOS **web filter proxy (`webfilterproxyd`, 127.0.0.1:10011) resets some HTTPS downloads**
+    (GitHub release assets) → `make up` retries `terraform apply` 3×.
+  - Trivy blocked the first image: CVE-2026-78669 (HIGH) in `golang.org/x/net` v0.59.0 → v0.60.0.
+  - cosign v2 needs `--allow-http-registry` (not `--allow-insecure-registry`) for plain HTTP.
+  - Alloy values: `configMap` must be under `alloy:`. Loki rules sidecar off.
+  - Argo CD: server-side diff on, repo-server timeouts 300 s + `ARGOCD_EXEC_TIMEOUT=5m`.
+  - Grafana chart made a random admin password per render (endless OutOfSync) → Secret
+    `monitoring/grafana-admin` created by `make up` from `.local/grafana-password`.
+  - Envoy: 2 replicas + PDB + 30 s tolerations; Prometheus/Alertmanager pinned to the control-plane
+    node in `platform/values/local/` (so a worker stop on chaos day keeps the evidence).
+- Docs written: ADRs (7) in `docs/adr/`, `architecture.md`, `slo.md`, runbooks, `chaos-day.md`,
+  README draft (`NUMBERS` placeholder), interview guide draft (`{{…}}` placeholders = measured
+  numbers still to fill in).
+- Image: 34.2 MB (docker image ls), SBOM 43 packages.
