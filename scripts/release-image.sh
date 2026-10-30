@@ -18,6 +18,23 @@ COSIGN_IMAGE=${COSIGN_IMAGE:-ghcr.io/sigstore/cosign/cosign:v2.4.1}
 SBOM=$LOCAL/sbom-$TAG.spdx.json
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
+# the digest the registry serves for a tag, if it has it
+digest_of() {
+  curl -fsSI \
+    -H 'Accept: application/vnd.oci.image.index.v1+json' \
+    -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
+    -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+    -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+    "http://localhost:5001/v2/shortener/manifests/$1" 2>/dev/null |
+    awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}' | tr -d '\r'
+}
+
+# make up: don't rebuild a tag that is already in the registry with its signature and SBOM
+if [[ ${SKIP_IF_SIGNED:-} == 1 ]] && d=$(digest_of "$TAG") && [[ $d == sha256:* ]] &&
+  [[ $(digest_of "sha256-${d#sha256:}.sig") == sha256:* && $(digest_of "sha256-${d#sha256:}.att") == sha256:* ]]; then
+  echo "shortener:$TAG is already in the registry, signed and attested ($d)"
+  exit 0
+fi
 
 step "build $HOST_REPO:$TAG"
 docker build --quiet --build-arg VERSION="$TAG" -t "$HOST_REPO:$TAG" "$ROOT/app" >/dev/null
@@ -30,13 +47,7 @@ echo "no fixable HIGH/CRITICAL vulnerabilities"
 step "push"
 docker push --quiet "$HOST_REPO:$TAG" >/dev/null
 # the digest the registry serves for this tag (what Kyverno resolves the tag to)
-DIGEST=$(curl -fsSI \
-  -H 'Accept: application/vnd.oci.image.index.v1+json' \
-  -H 'Accept: application/vnd.oci.image.manifest.v1+json' \
-  -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
-  -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
-  "http://localhost:5001/v2/shortener/manifests/$TAG" |
-  awk -F': ' 'tolower($1)=="docker-content-digest"{print $2}' | tr -d '\r')
+DIGEST=$(digest_of "$TAG")
 [[ $DIGEST == sha256:* ]] || { echo "could not read the digest of $TAG" >&2; exit 1; }
 echo "$CLUSTER_REPO@$DIGEST"
 

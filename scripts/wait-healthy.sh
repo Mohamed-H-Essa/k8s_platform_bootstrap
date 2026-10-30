@@ -6,6 +6,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+export KUBECONFIG=${KUBECONFIG:-$ROOT/.local/kubeconfig}
 TIMEOUT=${TIMEOUT:-1800}
 # root + every Application in the app-of-apps chart
 EXPECTED=$(( $(helm template "$ROOT/platform/apps" | grep -c '^kind: Application$') + 1 ))
@@ -14,10 +15,10 @@ start=$(date +%s)
 last=""
 while :; do
   rows=$(kubectl -n argocd get applications.argoproj.io --no-headers \
-    -o custom-columns='N:.metadata.name,S:.status.sync.status,H:.status.health.status' 2>/dev/null || true)
+    -o custom-columns='N:.metadata.name,S:.status.sync.status,H:.status.health.status' 2>/dev/null | grep . || true)
   total=$(grep -c . <<<"$rows" || true)
-  pending=$(awk '$2!="Synced" || $3!="Healthy" {printf "%s(%s/%s) ", $1, $2, $3}' <<<"$rows")
-  ready=$(( total - $(awk '$2!="Synced" || $3!="Healthy"' <<<"$rows" | grep -c . || true) ))
+  pending=$(awk 'NF && ($2!="Synced" || $3!="Healthy") {printf "%s(%s/%s) ", $1, $2, $3}' <<<"$rows")
+  ready=$(awk 'NF && $2=="Synced" && $3=="Healthy"' <<<"$rows" | grep -c . || true)
   elapsed=$(( $(date +%s) - start ))
 
   if (( total >= EXPECTED )) && [[ -z $pending ]]; then

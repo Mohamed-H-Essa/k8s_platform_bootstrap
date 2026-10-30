@@ -44,13 +44,16 @@ prometheus-node-exporter:
     requests: { cpu: 10m, memory: 24Mi }
 
 grafana:
+  # the admin password is not in Git: `make up` creates this Secret (.local/grafana-password)
+  admin:
+    existingSecret: grafana-admin
   resources:
     requests: { cpu: 25m, memory: 128Mi }
     limits: { memory: 384Mi }
   grafana.ini:
     server:
       root_url: http://grafana.localtest.me
-    # read-only browsing without a login; admin is still admin / prom-operator
+    # read-only browsing without a login (admin: see `make urls`)
     auth.anonymous:
       enabled: true
       org_role: Viewer

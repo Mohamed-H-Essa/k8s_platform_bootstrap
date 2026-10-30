@@ -26,10 +26,14 @@ up: keys ## create everything: cluster, registry, caches, Git, Argo CD, then the
 	  [ $$i = 3 ] && exit 1; echo "apply failed, retrying ($$i/3)"; sleep 10; \
 	done
 	terraform -chdir=$(TF_LOCAL) output -raw kubeconfig > $(KUBECONFIG)
-	kubectl create namespace kyverno --dry-run=client -o yaml | kubectl apply -f -
+	@# the two secrets that never go to Git: the release public key and Grafana's admin password
+	for ns in kyverno monitoring; do kubectl create namespace $$ns --dry-run=client -o yaml | kubectl apply -f - >/dev/null; done
 	kubectl -n kyverno create secret generic cosign-pub --from-file=cosign.pub=$(LOCAL)/cosign.pub \
 	  --dry-run=client -o yaml | kubectl apply -f -
-	$(MAKE) --no-print-directory publish image
+	kubectl -n monitoring create secret generic grafana-admin --from-literal=admin-user=admin \
+	  --from-file=admin-password=$(LOCAL)/grafana-password --dry-run=client -o yaml | kubectl apply -f -
+	$(MAKE) --no-print-directory publish
+	SKIP_IF_SIGNED=1 scripts/release-image.sh $(TAG)
 	scripts/wait-healthy.sh
 	@$(MAKE) --no-print-directory urls
 
@@ -44,13 +48,16 @@ clean: down ## down, and also delete the image caches and the local registry's d
 	  slipway-cache-dockerio-data slipway-cache-quayio-data slipway-cache-ghcrio-data slipway-cache-k8sio-data
 
 .PHONY: keys
-keys: $(LOCAL)/git_ed25519 $(LOCAL)/cosign.key ## make the local Git and signing keys (once)
+keys: $(LOCAL)/git_ed25519 $(LOCAL)/cosign.key $(LOCAL)/grafana-password ## make the local keys and passwords (once)
 $(LOCAL)/git_ed25519:
 	@mkdir -p $(LOCAL)
 	ssh-keygen -q -t ed25519 -N '' -C slipway-git -f $@
 $(LOCAL)/cosign.key:
 	@mkdir -p $(LOCAL)
 	cd $(LOCAL) && COSIGN_PASSWORD= cosign generate-key-pair --output-key-prefix cosign >/dev/null
+$(LOCAL)/grafana-password:
+	@mkdir -p $(LOCAL)
+	@openssl rand -base64 18 | tr -d '\n' > $@
 
 # ---- GitOps --------------------------------------------------------------------------
 .PHONY: publish
@@ -103,7 +110,7 @@ chaos: ## chaos day: pod kill, node loss, database failover, bad release (see do
 urls: ## where everything is
 	@echo
 	@echo "  Shortener  http://sho.localtest.me      (POST /api/links {\"url\": \"https://…\"})"
-	@echo "  Grafana    http://grafana.localtest.me  (dashboard: Shortener · service and SLOs)"
+	@echo "  Grafana    http://grafana.localtest.me  (dashboard: Shortener · service and SLOs; admin / $$(cat $(LOCAL)/grafana-password))"
 	@echo "  Argo CD    http://argocd.localtest.me   (admin / $$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' 2>/dev/null | base64 -d))"
 	@echo "  Prometheus http://prometheus.localtest.me"
 	@echo
