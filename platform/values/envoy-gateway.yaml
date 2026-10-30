@@ -14,6 +14,11 @@ deployment:
         labelSelector:
           matchLabels: { app.kubernetes.io/name: gateway-helm }
   envoyGateway:
+    # 1-second probes failed on the busy laptop and restarted the controllers in a loop;
+    # every restart cut the Envoys off from their config
+    startupProbe: { httpGet: { path: /healthz, port: 8081 }, periodSeconds: 2, failureThreshold: 90, timeoutSeconds: 5 }
+    livenessProbe: { httpGet: { path: /healthz, port: 8081 }, periodSeconds: 20, timeoutSeconds: 10, failureThreshold: 6 }
+    readinessProbe: { httpGet: { path: /readyz, port: 8081 }, periodSeconds: 10, timeoutSeconds: 5 }
     resources:
       requests: { cpu: 50m, memory: 96Mi }
       limits: { memory: 256Mi }

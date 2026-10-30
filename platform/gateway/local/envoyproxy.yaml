@@ -13,6 +13,17 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDaemonSet:
+        # more patient probes than the defaults (they restarted Envoy on the busy laptop)
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: envoy
+                      livenessProbe: { timeoutSeconds: 5, failureThreshold: 6 }
+                      readinessProbe: { timeoutSeconds: 5, failureThreshold: 6 }
         pod:
           tolerations:
             - { key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule }

@@ -36,6 +36,10 @@ applicationSet:
   replicas: 0
 
 controller:
+  # it was OOM-killed at its 1Gi limit three times in a day; a soft Go memory limit makes it
+  # collect garbage harder before the hard limit kills it
+  env:
+    - { name: GOMEMLIMIT, value: 850MiB }
   resources:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 1Gi }
