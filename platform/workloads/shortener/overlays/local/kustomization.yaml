@@ -6,4 +6,4 @@ resources:
 images:
   - name: shortener
     newName: slipway-registry:5000/shortener
-    newTag: 5a58658-124615
+    newTag: e3256da-140312
