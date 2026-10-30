@@ -33,3 +33,5 @@ chunksCache: { enabled: false }
 resultsCache: { enabled: false }
 lokiCanary: { enabled: false }
 test: { enabled: false }
+sidecar:
+  rules: { enabled: false } # no Loki alerting rules here: saves a container

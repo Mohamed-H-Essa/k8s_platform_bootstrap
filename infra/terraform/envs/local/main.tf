@@ -55,10 +55,11 @@ resource "kind_cluster" "this" {
     api_version = "kind.x-k8s.io/v1alpha4"
 
     # containerd looks up per-registry hosts.toml files here (see containerd/certs.d):
-    # that is where docker.io → the cache, and slipway-registry:5000 → plain HTTP, are set
+    # that is where docker.io → the cache, and slipway-registry:5000 → plain HTTP, are set.
+    # kind's node image still writes a version 2 containerd config, hence the v2 key.
     containerd_config_patches = [
       <<-TOML
-      [plugins."io.containerd.cri.v1.images".registry]
+      [plugins."io.containerd.grpc.v1.cri".registry]
         config_path = "/etc/containerd/certs.d"
       TOML
     ]
