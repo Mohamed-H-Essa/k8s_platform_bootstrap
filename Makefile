@@ -19,8 +19,12 @@ help: ## list the targets
 .PHONY: up
 up: keys ## create everything: cluster, registry, caches, Git, Argo CD, then the platform
 	terraform -chdir=$(TF_LOCAL) init -upgrade -input=false >/dev/null
-	TF_VAR_docker_host=$(DOCKER_SOCK) TF_VAR_git_admin_public_key=$(LOCAL)/git_ed25519.pub \
-	  terraform -chdir=$(TF_LOCAL) apply -auto-approve -input=false
+	@# chart downloads can fail on a flaky network; apply is idempotent, so retry it
+	for i in 1 2 3; do \
+	  TF_VAR_docker_host=$(DOCKER_SOCK) TF_VAR_git_admin_public_key=$(LOCAL)/git_ed25519.pub \
+	    terraform -chdir=$(TF_LOCAL) apply -auto-approve -input=false && break; \
+	  [ $$i = 3 ] && exit 1; echo "apply failed, retrying ($$i/3)"; sleep 10; \
+	done
 	terraform -chdir=$(TF_LOCAL) output -raw kubeconfig > $(KUBECONFIG)
 	kubectl create namespace kyverno --dry-run=client -o yaml | kubectl apply -f -
 	kubectl -n kyverno create secret generic cosign-pub --from-file=cosign.pub=$(LOCAL)/cosign.pub \

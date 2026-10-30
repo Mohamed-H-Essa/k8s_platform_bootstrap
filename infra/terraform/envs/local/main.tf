@@ -115,6 +115,8 @@ resource "docker_container" "registry" {
   }
   networks_advanced { name = "kind" }
   depends_on = [kind_cluster.this]
+  # some engines (OrbStack) add default log options; don't recreate the container for that
+  lifecycle { ignore_changes = [log_opts] }
 }
 
 resource "docker_container" "cache" {
@@ -134,6 +136,8 @@ resource "docker_container" "cache" {
   }
   networks_advanced { name = "kind" }
   depends_on = [kind_cluster.this]
+  # some engines (OrbStack) add default log options; don't recreate the container for that
+  lifecycle { ignore_changes = [log_opts] }
 }
 
 resource "docker_image" "git" {
@@ -165,6 +169,8 @@ resource "docker_container" "git" {
   }
   networks_advanced { name = "kind" }
   depends_on = [kind_cluster.this]
+  # some engines (OrbStack) add default log options; don't recreate the container for that
+  lifecycle { ignore_changes = [log_opts] }
 }
 
 # ---- Argo CD and the root application ----------------------------------------------
