@@ -3,7 +3,7 @@
 # the evidence in .local/chaos/<timestamp>/ (timeline.log, results.tsv, requests.log,
 # k6-summary.json). See docs/chaos-day.md.
 #
-#   scripts/chaos/run-all.sh                    all four
+#   scripts/chaos/run-all.sh                        a release, then the four failures
 #   scripts/chaos/run-all.sh pod-kill db-failover   only these
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -11,7 +11,7 @@ export OUT=${OUT:-$ROOT/.local/chaos/$(date +%Y%m%d-%H%M%S)}
 source "$ROOT/scripts/chaos/lib.sh"
 
 EXPERIMENTS=("$@")
-(( ${#EXPERIMENTS[@]} )) || EXPERIMENTS=(pod-kill node-loss db-failover bad-release)
+(( ${#EXPERIMENTS[@]} )) || EXPERIMENTS=(release pod-kill node-loss db-failover bad-release)
 RATE=${RATE:-50}
 SETTLE=${SETTLE:-120} # seconds of normal traffic before, between and after experiments
 

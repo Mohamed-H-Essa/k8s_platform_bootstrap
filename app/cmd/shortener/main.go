@@ -72,7 +72,7 @@ func run(log *slog.Logger) error {
 
 	public := &http.Server{
 		Addr:              env("ADDR", ":8080"),
-		Handler:           otelhttp.NewHandler(srv.Routes(), "http", otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string { return r.Method + " " + r.Pattern })),
+		Handler:           otelhttp.NewHandler(srv.Routes(), "http", otelhttp.WithSpanNameFormatter(spanName)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -131,6 +131,15 @@ func connectWithRetry(ctx context.Context, log *slog.Logger, dsn string) (*short
 		time.Sleep(wait)
 		wait = min(wait*2, 15*time.Second)
 	}
+}
+
+// spanName names a server span after the route pattern that matched ("GET /{code}"), never
+// the raw path, so traces group by route. The pattern already starts with the method.
+func spanName(_ string, r *http.Request) string {
+	if r.Pattern != "" {
+		return r.Pattern
+	}
+	return r.Method
 }
 
 func env(k, def string) string {
