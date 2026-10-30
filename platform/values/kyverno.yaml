@@ -16,6 +16,10 @@ reportsController:
 cleanupController:
   enabled: false
 features:
+  # no report object per admission request: on a laptop that churn costs more CPU than
+  # it is worth (background scan reports are still written)
+  admissionReports:
+    enabled: false
   registryClient:
     # the local registry speaks plain HTTP (it never leaves the laptop)
     allowInsecure: true
