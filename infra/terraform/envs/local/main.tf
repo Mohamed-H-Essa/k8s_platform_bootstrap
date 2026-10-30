@@ -66,6 +66,19 @@ resource "kind_cluster" "this" {
 
     node {
       role = "control-plane"
+      # etcd without fsync: on this laptop's virtual disk a WAL fsync averaged ~50 ms and a
+      # commit ~100 ms (healthy is < 10 ms), so the API server stalled, leader elections
+      # timed out and controllers restarted in a loop. A throwaway local cluster does not
+      # need crash-safe etcd; a real one does (and gets it on EKS).
+      kubeadm_config_patches = [
+        <<-YAML
+        kind: ClusterConfiguration
+        etcd:
+          local:
+            extraArgs:
+              unsafe-no-fsync: "true"
+        YAML
+      ]
       # host :80 → the Envoy Gateway NodePort: http://*.localtest.me reaches the cluster
       extra_port_mappings {
         container_port = 30080
