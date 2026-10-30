@@ -1,0 +1,6 @@
+# Local: images from the laptop's registry, signed with the local release key.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - verify-images.yaml

@@ -25,8 +25,8 @@ its CRDs, which a client-side diff reports as drift forever).
 {{ include "slipway.helmApp" (merge . (dict "root" $)) }}
 {{- end }}
 {{- $dirs := list
-  (dict "name" "platform-gateway" "wave" 1 "namespace" "envoy-gateway-system" "path" "platform/gateway")
-  (dict "name" "platform-policies" "wave" 1 "namespace" "kyverno" "path" "platform/policies")
+  (dict "name" "platform-gateway" "wave" 1 "namespace" "envoy-gateway-system" "path" (printf "platform/gateway/%s" $.Values.env))
+  (dict "name" "platform-policies" "wave" 1 "namespace" "kyverno" "path" (printf "platform/policies/%s" $.Values.env))
   (dict "name" "platform-observability" "wave" 1 "namespace" "monitoring" "path" "platform/observability")
   (dict "name" "shortener" "wave" 2 "namespace" "shortener" "path" (printf "platform/workloads/shortener/overlays/%s" $.Values.env))
 -}}

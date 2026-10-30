@@ -1,0 +1,32 @@
+# Envoy as a DaemonSet, including the control-plane node: kind maps localhost:80 to
+# NodePort 30080 on the control-plane node, and with externalTrafficPolicy: Local that
+# node's own Envoy takes the request. (Through kube-proxy to an Envoy on a worker, requests
+# from outside timed out on this setup, while the same NodePort on a worker answered.)
+# One Envoy per node also means losing a worker never takes the entry point down.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: platform-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDaemonSet:
+        pod:
+          tolerations:
+            - { key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule }
+        container:
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Local
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              ports:
+                - port: 80
+                  nodePort: 30080

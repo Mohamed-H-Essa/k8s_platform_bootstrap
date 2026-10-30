@@ -1,5 +1,6 @@
+# AWS: images from GHCR, signed keyless by the CI workflow on main.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - ../base
   - verify-images.yaml
-  - restricted-workloads.yaml

@@ -1,0 +1,38 @@
+# Supply chain gate on AWS: in application namespaces, an image from this project's GHCR
+# repository runs only if the CI workflow on main signed it keyless (GitHub OIDC identity,
+# recorded in the public Rekor log) AND attested its SPDX SBOM the same way. No key to
+# store or rotate: the trust is "built by this repo's ci.yml on main".
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-platform-images
+  annotations:
+    policies.kyverno.io/title: Signed images with an SBOM (keyless, from CI)
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 15
+  background: false
+  rules:
+    - name: signed-and-attested
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchLabels: { slipway.dev/policy: restricted }
+      verifyImages:
+        - imageReferences: ["ghcr.io/mohamed-h-essa/*"]
+          mutateDigest: true
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keyless: &ci
+                    issuer: https://token.actions.githubusercontent.com
+                    subject: https://github.com/Mohamed-H-Essa/k8s_platform_bootstrap/.github/workflows/ci.yml@refs/heads/main
+                    rekor: { url: https://rekor.sigstore.dev }
+          attestations:
+            - type: https://spdx.dev/Document
+              attestors:
+                - entries:
+                    - keyless: *ci

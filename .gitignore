@@ -89,3 +89,4 @@ out/
 # test and build output
 app/shortener
 *.out
+infra/terraform/envs/local/*-config

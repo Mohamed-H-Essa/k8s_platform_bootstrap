@@ -1,0 +1,30 @@
+# Two Envoy replicas in different zones behind an internet-facing NLB (EKS's built-in
+# load balancer support, no extra controller). Never applied: there is no AWS account.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: platform-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels: { gateway.envoyproxy.io/owning-gateway-name: platform }
+        container:
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      envoyPDB: { minAvailable: 1 }
+      envoyService:
+        type: LoadBalancer
+        externalTrafficPolicy: Local # keep the client's IP
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb

@@ -6,6 +6,8 @@ resources:
 images:
   - name: shortener
     newName: ghcr.io/mohamed-h-essa/shortener
+    # CI pushes ghcr.io/mohamed-h-essa/shortener:sha-<commit> from main (signed keyless);
+    # an AWS release is a commit that sets this tag to one of those
     newTag: 0.1.0
 patches:
   - target: { kind: Deployment, name: shortener }
@@ -13,3 +15,5 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/env/1/value
         value: https://sho.example.com
+  - target: { kind: HTTPRoute, name: shortener }
+    patch: '[{"op": "replace", "path": "/spec/hostnames", "value": ["sho.example.com"]}]'
