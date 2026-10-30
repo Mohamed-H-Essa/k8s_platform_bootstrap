@@ -371,3 +371,6 @@ Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothin
   helm_release timed out 3×) → Redis now from Docker Hub (commit "argocd: Redis from Docker Hub").
   `e2e.yml` re-run started: **41055776749** — check it with `gh run watch 41055776749`; if it fails,
   `gh run view 41055776749 --log-failed` and the Diagnostics step show pod states.
+- 15:05: **`e2e.yml` green** (run 41055776749): cold `make up` on a fresh GitHub runner in 10 min 22 s,
+  then `make smoke` and `make unsigned` pass. `ci.yml` green. Remaining: the bad-release and
+  database-failover re-runs (see "What is next" above), section 5G (portfolio, CV, PR kit).

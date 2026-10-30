@@ -84,7 +84,8 @@ average 10–20), so read them as behaviour, not benchmarks. Evidence and method
 | Pod killed (`--grace-period=0`) | back to 4/4 ready in **12 s**, **0 failed requests** |
 | Worker node lost, before the fixes | **48 % of requests failed for 6 min 3 s**; the app's own metrics saw none of it ([why](docs/postmortems/2026-10-30-chaos-day.md)) |
 | Worker node lost, after the fixes | NotReady at +50 s, pods running elsewhere at +84 s, **2 of 5,719 requests failed** |
-| `make up` with warm caches | 11 min 20 s and 14 min 0 s (two runs) |
+| `make up` with warm caches (laptop) | 11 min 20 s and 14 min 0 s (two runs) |
+| `make up` cold, on a fresh GitHub runner (`e2e.yml`) | **10 min 22 s**, then `make smoke` and `make unsigned` pass |
 | Postgres primary killed (right after a node loss, before the operator fix) | no promotion for over 5 min: the operator itself was restarting; requests hung (fixed: 2 operators, 2 s DB timeouts; not re-measured yet) |
 | Bad release caught by the burn-rate page, rolled back with `git revert` | **not run yet**: the laptop's control plane was saturated by then (see the postmortem) |
 

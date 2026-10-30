@@ -128,7 +128,7 @@ The design is meant to transfer; the numbers are not a benchmark.
 ## The numbers
 
 All measured, with method, in the README table and the postmortem. The ones to remember:
-warm `make up` 11–14 min; image 34.2 MB (7.2 MiB compressed); 2 min at 50 req/s: 6,031
+cold `make up` on a fresh GitHub runner 10 min 22 s (the e2e workflow), warm on the laptop 11–14 min; image 34.2 MB (7.2 MiB compressed); 2 min at 50 req/s: 6,031
 requests, 0 failed, p95 168.5 ms; release under load: 0 failed requests, ~45 s to build and
 sign, 35–48 s to roll out; pod kill: 0 failed, 12 s to ready; node loss: 48 % failing for 6 min
 before the fixes, 2 failed out of 5,719 after.
