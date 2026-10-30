@@ -366,3 +366,8 @@ Branch `slipway-aws-ci`, rebased on `main` at `7e5b029`. Nothing applied, nothin
   (the first run was interrupted by fixes); the caches hold 1.77 GB, so time `make clean && make up`
   once. Open action items: gateway-level SLI (Envoy PodMonitor + rule), priority classes for
   platform controllers, caches for reg.kyverno.io and public.ecr.aws.
+- 14:40: `ci.yml` green on every push (latest e20339c). First `e2e.yml` run (41049674053) failed:
+  Argo CD's Redis image from ecr-public.aws.com was refused on the GitHub runner (ImagePullBackOff,
+  helm_release timed out 3×) → Redis now from Docker Hub (commit "argocd: Redis from Docker Hub").
+  `e2e.yml` re-run started: **41055776749** — check it with `gh run watch 41055776749`; if it fails,
+  `gh run view 41055776749 --log-failed` and the Diagnostics step show pod states.
