@@ -15,8 +15,9 @@ about something that isn't here, say so; don't round up.
 >
 > Releases go through a pipeline that scans with Trivy, generates an SBOM with Syft and signs with
 > cosign, and Kyverno refuses any image that isn't signed and attested. Then I ran a chaos day
-> under load: killed pods, stopped a node, killed the database primary and shipped a bad release
-> through Git, measured detection and recovery, and wrote a blameless postmortem. The AWS version
+> under load: killed pods, stopped a node and killed the database primary, measured what users
+> saw and how long recovery took, fixed what broke, and wrote a blameless postmortem. (The
+> bad-release experiment is scripted but hasn't run yet; say so if asked.) The AWS version
 > is written in Terraform and validated offline; I haven't applied it because I don't have an
 > account, and I say that in the README."
 
