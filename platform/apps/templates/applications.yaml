@@ -6,6 +6,10 @@ before it is Healthy (see the health check in platform/values/argocd.yaml):
   1  what builds on them: logs, traces, collector, gateway routes, policies, SLO rules
   2  the workload: the shortener and its database
 
+includeMutation (the workload): keep what mutating webhooks change in that dry run. Argo CD
+drops those changes by default, and Kyverno rewrites every image to tag@digest, so a release
+(a new tag) compared as "Synced" and never rolled out (chaos day, run 2).
+
 serverSideDiff: compare with a server-side dry run (Kyverno's chart renders `labels: {}` on
 its CRDs, which a client-side diff reports as drift forever).
 */ -}}
@@ -28,7 +32,7 @@ its CRDs, which a client-side diff reports as drift forever).
   (dict "name" "platform-gateway" "wave" 1 "namespace" "envoy-gateway-system" "path" (printf "platform/gateway/%s" $.Values.env))
   (dict "name" "platform-policies" "wave" 1 "namespace" "kyverno" "path" (printf "platform/policies/%s" $.Values.env))
   (dict "name" "platform-observability" "wave" 1 "namespace" "monitoring" "path" "platform/observability")
-  (dict "name" "shortener" "wave" 2 "namespace" "shortener" "path" (printf "platform/workloads/shortener/overlays/%s" $.Values.env))
+  (dict "name" "shortener" "wave" 2 "namespace" "shortener" "path" (printf "platform/workloads/shortener/overlays/%s" $.Values.env) "includeMutation" true)
 -}}
 {{- range $dirs }}
 ---

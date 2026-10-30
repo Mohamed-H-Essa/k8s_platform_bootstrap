@@ -60,7 +60,11 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: {{ .wave | quote }}
+    {{- if .includeMutation }}
+    argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+    {{- else }}
     argocd.argoproj.io/compare-options: ServerSideDiff=true
+    {{- end }}
   finalizers: [resources-finalizer.argocd.argoproj.io]
 spec:
   project: default
