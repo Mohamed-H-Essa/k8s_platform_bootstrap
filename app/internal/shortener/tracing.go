@@ -24,8 +24,11 @@ func SetupTracing(ctx context.Context, service, version string) (func(context.Co
 	if err != nil {
 		return nil, err
 	}
-	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(semconv.SchemaURL,
-		semconv.ServiceName(service), semconv.ServiceVersion(version)))
+	// No schema URL on our attributes: merging with the SDK's default resource fails when
+	// the two semconv versions differ ("conflicting Schema URL"), which crashed the first
+	// deploy. The attribute names themselves are stable.
+	res, err := resource.New(ctx, resource.WithFromEnv(), resource.WithTelemetrySDK(),
+		resource.WithAttributes(semconv.ServiceName(service), semconv.ServiceVersion(version)))
 	if err != nil {
 		return nil, err
 	}
